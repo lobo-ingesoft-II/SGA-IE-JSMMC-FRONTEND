@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { Outlet, RouteObject, createBrowserRouter } from 'react-router-dom';
+import { Outlet, RouteObject, createBrowserRouter, Navigate } from 'react-router-dom';
 
 import paths, { rootPaths } from './paths';
 
@@ -54,6 +54,10 @@ const routes: RouteObject[] = [
         ),
         children: [
           {
+            index: true, // Redirección automática al login
+            element: <Navigate to={paths.login} replace />,
+          },
+          {
             path: paths.home,
             element: <Sales />,
           },
@@ -69,6 +73,10 @@ const routes: RouteObject[] = [
           </AuthLayout>
         ),
         children: [
+          {
+            index: true,
+            element: <Navigate to={paths.login} replace />,
+          },
           {
             path: paths.login,
             element: <Login />,

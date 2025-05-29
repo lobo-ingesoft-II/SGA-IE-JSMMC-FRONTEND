@@ -1,7 +1,6 @@
-import Grid from '@mui/material/Unstable_Grid2';
+import Grid from '@mui/material/Grid';
 import { Stack } from '@mui/material';
 import { ReactElement } from 'react';
-
 import TopSellingProduct from '../../components/sections/dashboard/Home/Sales/TopSellingProduct/TopSellingProduct';
 import WebsiteVisitors from '../../components/sections/dashboard/Home/Sales/WebsiteVisitors/WebsiteVisitors';
 import SaleInfoCards from '../../components/sections/dashboard/Home/Sales/SaleInfoSection/SaleInfoCards';
@@ -27,19 +26,19 @@ const Sales = (): ReactElement => {
         pl: { xs: 3.75, lg: 0 },
       }}
     >
-      <Grid xs={12}>
+      <Grid item xs={12}>
         <SaleInfoCards />
       </Grid>
-      <Grid xs={12} md={8}>
+      <Grid item xs={12} md={8}>
         <Revenue />
       </Grid>
-      <Grid xs={12} md={4}>
+      <Grid item xs={12} md={4}>
         <WebsiteVisitors />
       </Grid>
-      <Grid xs={12} lg={8}>
+      <Grid item xs={12} lg={8}>
         <TopSellingProduct />
       </Grid>
-      <Grid xs={12} lg={4}>
+      <Grid item xs={12} lg={4}>
         <Stack
           direction={{ xs: 'column', sm: 'row', lg: 'column' }}
           gap={3.75}

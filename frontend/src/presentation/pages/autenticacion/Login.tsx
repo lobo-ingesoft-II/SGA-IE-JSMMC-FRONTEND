@@ -1,164 +1,240 @@
 import { ReactElement, Suspense, useState } from 'react';
 import {
   Button,
-  FormControl,
   IconButton,
   InputAdornment,
-  InputLabel,
   Link,
   OutlinedInput,
   Skeleton,
   Stack,
   TextField,
   Typography,
+  Snackbar,
+  Alert,
+  Box,
+  InputLabel,
+  FormControl,
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';  // <-- Importa Link de react-router-dom
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import loginBanner from '../../assets/authentication-banners/login.png';
 import IconifyIcon from '../../components/base/IconifyIcon';
 import logo from '../../assets/logo/logo.png';
 import Image from '../../components/base/Image';
+import { useAuth } from '../../../context/AuthContext';
 
 const Login = (): ReactElement => {
   const [showPassword, setShowPassword] = useState(false);
+  const [userCode, setUserCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
 
-  // Estado para mostrar mensaje de éxito al loguearse
-  const [loginSuccess, setLoginSuccess] = useState(false);
+  const handleLogin = async () => {
+    setLoading(true);
+    setLoginError(null);
+    setLoginSuccess(false);
+    try {
+      const response = await fetch('http://localhost:8000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: userCode,
+          password: password,
+        }),
+      });
 
-  // (llamada a backend)
-  const handleLogin = () => {
-    // Simulación fetch/Axios para validar
-    // 
-    setLoginSuccess(true);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.access_token) {
+          login(data.access_token); // Guarda el token y autentica al usuario
+          setLoginSuccess(true);
+          setLoginError(null);
+          // Redirige al home o dashboard después de login exitoso
+          navigate('/home', { replace: true });
+        } else {
+          setLoginError('Respuesta inválida del servidor');
+        }
+      } else {
+        const data = await response.json();
+        setLoginError(data.detail || 'Error al iniciar sesión');
+      }
+    } catch (error) {
+      setLoginError('No se pudo conectar con el servidor');
+      setOpenSnackbar(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setOpenSnackbar(false);
   };
 
   return (
-  <Stack
-    direction={{ xs: 'column', md: 'row' }}
-    bgcolor="background.paper"
-    boxShadow={(theme) => theme.shadows[3]}
-    sx={{
-      width: { xs: '90%', md: 960 },
-      height: { xs: 'auto', md: 560 },
-      m: 'auto',
-      borderRadius: 2,
-      overflow: 'hidden',
-    }}
-  >
-    {/* Lado formulario */}
     <Stack
-      flex={1}
-      m={2.5}
-      gap={3}
-      alignItems="center"
+      direction={{ xs: 'column', md: 'row' }}
+      bgcolor="background.paper"
+      boxShadow={(theme) => theme.shadows[3]}
+      sx={{
+        width: { xs: '90%', md: 960 },
+        height: { xs: 'auto', md: 560 },
+        m: 'auto',
+        borderRadius: 2,
+        overflow: 'hidden',
+      }}
     >
-      {/* Logo centrado + título */}
-      <Stack alignItems="center" gap={1}>
-        <Image src={logo} width={82.6} alt="Logo" />
-        <Typography variant="h6" textAlign="center" fontWeight="bold">
-          Institución Educativa Departamental Josué Manrique
-        </Typography>
-      </Stack>
-
-      <Stack alignItems="center" gap={2.5} sx={{ width: { xs: '100%', sm: 330 } }}>
-        <Typography variant="h3" textAlign="center">
-          Iniciar sesión
-        </Typography>
-
-        <FormControl variant="standard" fullWidth>
-          <InputLabel shrink htmlFor="email">
-            Código de usuario
-          </InputLabel>
-          <TextField
-            variant="filled"
-            placeholder="Ingresa tu código de usuario"
-            id="email"
-            fullWidth
-          />
-        </FormControl>
-
-        <FormControl variant="standard" fullWidth>
-          <InputLabel shrink htmlFor="password">
-            Contraseña
-          </InputLabel>
-          <OutlinedInput
-            placeholder="********"
-            type={showPassword ? 'text' : 'password'}
-            id="password"
-            endAdornment={
-              <InputAdornment position="end">
-                <IconButton
-                  aria-label="toggle password visibility"
-                  onClick={handleClickShowPassword}
-                  edge="end"
-                  sx={{ color: 'text.secondary' }}
-                >
-                  <IconifyIcon icon={showPassword ? 'ic:baseline-key-off' : 'ic:baseline-key'} />
-                </IconButton>
-              </InputAdornment>
-            }
-            fullWidth
-          />
-        </FormControl>
-
-        <Button variant="contained" fullWidth onClick={handleLogin}>
-          Log in
-        </Button>
-
-        {loginSuccess && (
-          <Typography variant="body1" color="success.main" mt={2}>
-            ¡Credenciales correctas! Has iniciado sesión exitosamente.
+      {/* Lado formulario */}
+      <Stack
+        flex={1}
+        m={2.5}
+        gap={3}
+        alignItems="center"
+      >
+        {/* Logo centrado + título */}
+        <Stack alignItems="center" gap={1}>
+          <Image src={logo} width={82.6} alt="Logo" />
+          <Typography variant="h6" textAlign="center" fontWeight="bold">
+            Institución Educativa Departamental Josué Manrique
           </Typography>
-        )}
+        </Stack>
 
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            textAlign: 'center',
-            width: '100%',
-            mt: 1,
-          }}
-        >
-          Inscribirse como nuevo estudiante{' '}
-          <Link
-            component={RouterLink}
-            to="/authentication/sign-up"
-            underline="hover"
-            sx={{ ml: 0.5 }}
-          >
-            Formulario prematrícula
-          </Link>
-        </Typography>
+        <Box sx={{ width: '100%', maxWidth: 330 }}>
+          <Stack alignItems="center" gap={2.5}>
+            <Typography variant="h3" textAlign="center">
+              Iniciar sesión
+            </Typography>
+
+            {/* Campo de usuario corregido */}
+            <TextField
+              variant="filled"
+              label="Código de usuario"
+              placeholder="Ingresa tu código de usuario"
+              id="email"
+              fullWidth
+              value={userCode}
+              onChange={(e) => setUserCode(e.target.value)}
+              disabled={loading}
+              InputLabelProps={{ shrink: true }}
+            />
+
+            {/* Campo de contraseña */}
+            <FormControl variant="outlined" fullWidth>
+              <InputLabel shrink htmlFor="password">
+                Contraseña
+              </InputLabel>
+              <OutlinedInput
+                placeholder="********"
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                endAdornment={
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleClickShowPassword}
+                      edge="end"
+                      sx={{ color: 'text.secondary' }}
+                    >
+                      <IconifyIcon icon={showPassword ? 'ic:baseline-key-off' : 'ic:baseline-key'} />
+                    </IconButton>
+                  </InputAdornment>
+                }
+                fullWidth
+                disabled={loading}
+                label="Contraseña"
+              />
+            </FormControl>
+
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={handleLogin}
+              disabled={loading || !userCode || !password}
+            >
+              {loading ? 'Ingresando...' : 'Log in'}
+            </Button>
+
+            {loginSuccess && (
+              <Typography variant="body1" color="success.main" mt={2}>
+                ¡Credenciales correctas! Has iniciado sesión exitosamente.
+              </Typography>
+            )}
+
+            {loginError && loginError !== 'No se pudo conectar con el servidor' && (
+              <Typography variant="body1" color="error.main" mt={2}>
+                {loginError}
+              </Typography>
+            )}
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                textAlign: 'center',
+                width: '100%',
+                mt: 1,
+              }}
+            >
+              Inscribirse como nuevo estudiante{' '}
+              <Link
+                component={RouterLink}
+                to="/authentication/sign-up"
+                underline="hover"
+                sx={{ ml: 0.5 }}
+              >
+                Formulario prematrícula
+              </Link>
+            </Typography>
+          </Stack>
+        </Box>
       </Stack>
-    </Stack>
 
-    {/* Lado banner (oculto en móvil) */}
-    <Suspense
-      fallback={
-        <Skeleton
-          variant="rectangular"
-          height="100%"
-          width="100%"
-          sx={{ bgcolor: 'primary.main' }}
+      {/* Lado banner (oculto en móvil) */}
+      <Suspense
+        fallback={
+          <Skeleton
+            variant="rectangular"
+            height="100%"
+            width="100%"
+            sx={{ bgcolor: 'primary.main' }}
+          />
+        }
+      >
+        <Image
+          alt="Login banner"
+          src={loginBanner}
+          sx={{
+            width: '50%',
+            display: { xs: 'none', md: 'block' },
+            objectFit: 'cover',
+          }}
         />
-      }
-    >
-      <Image
-        alt="Login banner"
-        src={loginBanner}
-        sx={{
-          width: '50%',
-          display: { xs: 'none', md: 'block' },
-          objectFit: 'cover',
-        }}
-      />
-    </Suspense>
-  </Stack>
+      </Suspense>
+
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+          No se pudo conectar con el servidor
+        </Alert>
+      </Snackbar>
+    </Stack>
   );
 }
 

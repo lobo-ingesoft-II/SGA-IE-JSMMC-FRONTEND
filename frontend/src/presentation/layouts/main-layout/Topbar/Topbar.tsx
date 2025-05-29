@@ -83,21 +83,8 @@ const Topbar = ({ handleDrawerToggle }: TopbarProps): ReactElement => {
           flex={'1 1 auto'}
         >
           <Typography variant="h5" component="h5">
-            {pathname === '/' ? 'Dashboard' : title}
+            {pathname === '/' ? 'Panel de control ' : title}
           </Typography>
-          <TextField
-            variant="outlined"
-            placeholder="Search..."
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end" sx={{ width: 24, height: 24 }}>
-                  <IconifyIcon icon="mdi:search" width={1} height={1} />
-                </InputAdornment>
-              ),
-            }}
-            fullWidth
-            sx={{ maxWidth: 330 }}
-          />
         </Stack>
         <Stack direction="row" alignItems="center" gap={{ xs: 1, sm: 1.75 }}>
           <IconButton color="inherit" centerRipple sx={{ bgcolor: 'inherit', p: 0.75 }}>
