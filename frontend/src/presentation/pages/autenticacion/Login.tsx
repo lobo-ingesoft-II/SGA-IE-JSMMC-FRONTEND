@@ -20,12 +20,22 @@ import loginBanner from '../../assets/authentication-banners/login.png';
 import IconifyIcon from '../../components/base/IconifyIcon';
 import logo from '../../assets/logo/logo.png';
 import Image from '../../components/base/Image';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../context/authContext';
+
+// Buenas prácticas: separar el estado del formulario y el handler
+type LoginForm = {
+  username: string;
+  password: string;
+};
+
+const initialForm: LoginForm = {
+  username: '',
+  password: '',
+};
 
 const Login = (): ReactElement => {
+  const [form, setForm] = useState<LoginForm>(initialForm);
   const [showPassword, setShowPassword] = useState(false);
-  const [userCode, setUserCode] = useState('');
-  const [password, setPassword] = useState('');
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,8 +44,18 @@ const Login = (): ReactElement => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleClickShowPassword = () => setShowPassword(!showPassword);
+  // Handler genérico para los campos
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
+  const handleClickShowPassword = () => setShowPassword((show) => !show);
+
+  // Preparado para FastAPI
   const handleLogin = async () => {
     setLoading(true);
     setLoginError(null);
@@ -46,19 +66,15 @@ const Login = (): ReactElement => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          username: userCode,
-          password: password,
-        }),
+        body: JSON.stringify(form),
       });
 
       if (response.ok) {
         const data = await response.json();
         if (data.access_token) {
-          login(data.access_token); // Guarda el token y autentica al usuario
+          login(data.access_token);
           setLoginSuccess(true);
           setLoginError(null);
-          // Redirige al home o dashboard después de login exitoso
           navigate('/home', { replace: true });
         } else {
           setLoginError('Respuesta inválida del servidor');
@@ -93,12 +109,7 @@ const Login = (): ReactElement => {
       }}
     >
       {/* Lado formulario */}
-      <Stack
-        flex={1}
-        m={2.5}
-        gap={3}
-        alignItems="center"
-      >
+      <Stack flex={1} m={2.5} gap={3} alignItems="center">
         {/* Logo centrado + título */}
         <Stack alignItems="center" gap={1}>
           <Image src={logo} width={82.6} alt="Logo" />
@@ -113,17 +124,19 @@ const Login = (): ReactElement => {
               Iniciar sesión
             </Typography>
 
-            {/* Campo de usuario corregido */}
+            {/* Campo de usuario */}
             <TextField
               variant="filled"
               label="Código de usuario"
               placeholder="Ingresa tu código de usuario"
-              id="email"
+              id="username"
+              name="username"
               fullWidth
-              value={userCode}
-              onChange={(e) => setUserCode(e.target.value)}
+              value={form.username}
+              onChange={handleChange}
               disabled={loading}
               InputLabelProps={{ shrink: true }}
+              autoComplete="username"
             />
 
             {/* Campo de contraseña */}
@@ -135,8 +148,9 @@ const Login = (): ReactElement => {
                 placeholder="********"
                 type={showPassword ? 'text' : 'password'}
                 id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                name="password"
+                value={form.password}
+                onChange={handleChange}
                 endAdornment={
                   <InputAdornment position="end">
                     <IconButton
@@ -152,6 +166,7 @@ const Login = (): ReactElement => {
                 fullWidth
                 disabled={loading}
                 label="Contraseña"
+                autoComplete="current-password"
               />
             </FormControl>
 
@@ -159,7 +174,7 @@ const Login = (): ReactElement => {
               variant="contained"
               fullWidth
               onClick={handleLogin}
-              disabled={loading || !userCode || !password}
+              disabled={loading || !form.username || !form.password}
             >
               {loading ? 'Ingresando...' : 'Log in'}
             </Button>
@@ -236,6 +251,6 @@ const Login = (): ReactElement => {
       </Snackbar>
     </Stack>
   );
-}
+};
 
 export default Login;
