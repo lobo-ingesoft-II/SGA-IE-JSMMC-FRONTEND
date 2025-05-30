@@ -11,13 +11,3 @@ MYSQL_CONFIG = {
 
 def get_mysql_connection():
     return mysql.connector.connect(**MYSQL_CONFIG)
-
-# Ejemplo de uso:
-if __name__ == "__main__":
-    conn = get_mysql_connection()
-    cursor = conn.cursor()
-    cursor.execute("SHOW TABLES;")
-    for table in cursor.fetchall():
-        print(table)
-    cursor.close()
-    conn.close()
