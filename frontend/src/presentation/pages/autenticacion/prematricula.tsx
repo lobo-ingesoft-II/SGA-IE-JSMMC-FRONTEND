@@ -193,7 +193,7 @@ const SignUp: React.FC = () => {
     e.preventDefault();
     try {
       // Cambia la URL por la de tu backend
-      const response = await fetch('http://localhost:8000/api/estudiantes', {
+      const response = await fetch('http://localhost:8000/prematriculas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
