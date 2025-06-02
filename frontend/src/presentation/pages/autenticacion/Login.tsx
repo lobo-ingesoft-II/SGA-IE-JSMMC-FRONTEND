@@ -206,7 +206,7 @@ const Login = (): ReactElement => {
               Inscribirse como nuevo estudiante{' '}
               <Link
                 component={RouterLink}
-                to="/authentication/sign-up"
+                to="/autenticacion/prematricula"
                 underline="hover"
                 sx={{ ml: 0.5 }}
               >

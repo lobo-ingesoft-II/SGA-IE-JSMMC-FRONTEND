@@ -1,9 +1,10 @@
 export const rootPaths = {
   homeRoot: '',
   pagesRoot: 'pages',
+  
   applicationsRoot: 'applications',
   ecommerceRoot: 'ecommerce',
-  authRoot: 'authentication',
+  authRoot: 'autenticacion',
   notificationsRoot: 'notifications',
   calendarRoot: 'calendar',
   messageRoot: 'messages',
@@ -13,8 +14,7 @@ export const rootPaths = {
 export default {
   home: `/${rootPaths.homeRoot}`,
   login: `/${rootPaths.authRoot}/login`,
-  signup: `/${rootPaths.authRoot}/sign-up`,
-  resetPassword: `/${rootPaths.authRoot}/reset-password`,
-  forgotPassword: `/${rootPaths.authRoot}/forgot-password`,
+  prematricula: `/${rootPaths.authRoot}/prematricula`,
+  
   404: `/${rootPaths.errorRoot}/404`,
 };

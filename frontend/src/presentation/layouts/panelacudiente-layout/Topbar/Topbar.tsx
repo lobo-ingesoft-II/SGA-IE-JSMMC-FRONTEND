@@ -11,7 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import IconifyIcon from '../../../components/base/IconifyIcon';
-import { drawerWidth } from '../../../layouts/main-layout';
+import { drawerWidth } from '..';
 
 import { useLocation } from 'react-router-dom';
 import capitalizePathname from '../../../../helpers/capitalize-pathname';

@@ -9,7 +9,7 @@ import Splash from '../components/loading/Splash';
 const App = lazy(() => import('../../App'));
 const MainLayout = lazy(async () => {
   return Promise.all([
-    import('../layouts/main-layout'),
+    import('../layouts/panelprofesor-layout'),
     new Promise((resolve) => setTimeout(resolve, 1000)),
   ]).then(([moduleExports]) => moduleExports);
 });
@@ -25,15 +25,15 @@ const Error404 = lazy(async () => {
   return import('../pages/errors/Error404');
 });
 
-const Sales = lazy(async () => {
+const Inicio = lazy(async () => {
   return Promise.all([
-    import('../pages/home/Sales'),
+    import('../pages/PanelProfesor/Inicio'),
     new Promise((resolve) => setTimeout(resolve, 500)),
   ]).then(([moduleExports]) => moduleExports);
 });
 
 const Login = lazy(async () => import('../pages/autenticacion/Login'));
-const SignUp = lazy(async () => import('../pages/autenticacion/prematricula'));
+const Prematricula = lazy(async () => import('../pages/autenticacion/prematricula'));
 
 const routes: RouteObject[] = [
   {
@@ -43,6 +43,11 @@ const routes: RouteObject[] = [
       </Suspense>
     ),
     children: [
+      // Redirigir la ruta raíz directamente al panel de profesores
+      {
+        path: '/',
+        element: <Navigate to={paths.home} replace />,
+      },
       {
         path: rootPaths.homeRoot,
         element: (
@@ -54,12 +59,12 @@ const routes: RouteObject[] = [
         ),
         children: [
           {
-            index: true, // Redirección automática al login
-            element: <Navigate to={paths.login} replace />,
+            index: true,
+            element: <Inicio />, // Muestra el panel de profesores por defecto
           },
           {
             path: paths.home,
-            element: <Sales />,
+            element: <Inicio />,
           },
         ],
       },
@@ -74,16 +79,12 @@ const routes: RouteObject[] = [
         ),
         children: [
           {
-            index: true,
-            element: <Navigate to={paths.login} replace />,
-          },
-          {
             path: paths.login,
             element: <Login />,
           },
           {
-            path: paths.signup,
-            element: <SignUp />,
+            path: paths.prematricula,
+            element: <Prematricula />,
           },
         ],
       },

@@ -1,8 +1,8 @@
 import { PropsWithChildren, ReactElement, useState } from 'react';
 import { Box, Drawer, Stack, Toolbar } from '@mui/material';
 
-import Sidebar from '../../layouts/main-layout/Sidebar/Sidebar';
-import Topbar from '../../layouts/main-layout/Topbar/Topbar';
+import Sidebar from './Sidebar/Sidebar';
+import Topbar from './Topbar/Topbar';
 import Footer from './Footer';
 
 export const drawerWidth = 278;

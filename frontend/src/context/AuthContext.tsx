@@ -1,7 +1,13 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
+type User = {
+  name: string;
+  role: 'admin' | 'profesor' | 'acudiente' | string;
+};
+
 type AuthContextType = {
   isAuthenticated: boolean;
+  user: User | null;
   login: (token: string) => void;
   logout: () => void;
 };
