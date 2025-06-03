@@ -11,7 +11,7 @@ import {
 import { OverridableComponent } from '@mui/material/OverridableComponent';
 import IconifyIcon from '../../../components/base/IconifyIcon';
 import { useLocation } from 'react-router-dom';
-import { NavItem } from '../../../../data/nav-items';
+import { NavItem } from '../../../../helpers/navItem';
 
 interface NavItemProps {
   navItem: NavItem;
