@@ -1,7 +1,24 @@
-import { ReactElement } from 'react';
-import TopSellingProduct from '../../components/sections/dashboard/PanelProfesores/Sedes/vistaSedes/vistaSedes';
+import { ReactElement, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import VistaSedes from '../../components/sections/dashboard/PanelProfesor/Sedes/vistaSedes';
+import { useAuth } from '../../../context/authContext';
 
-const Inicio = (): ReactElement => {
+const Sedes = (): ReactElement | null => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  /*
+  useEffect(() => {
+    if (!user) {
+      // Redirigir al login si no está autenticado
+      navigate('/autenticacion/Login'); 
+    }
+  }, [user, navigate]);
+
+  // Evita renderizar mientras verifica
+  if (!user) return null;
+  */
+
   return (
     <div style={{
       position: 'absolute',
@@ -13,9 +30,9 @@ const Inicio = (): ReactElement => {
       padding: 0,
       overflow: 'auto'
     }}>
-      <TopSellingProduct />
+      <VistaSedes />
     </div>
   );
 };
 
-export default Inicio;
+export default Sedes;

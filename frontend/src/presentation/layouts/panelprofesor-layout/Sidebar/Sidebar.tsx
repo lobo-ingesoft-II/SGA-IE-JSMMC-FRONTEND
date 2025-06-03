@@ -1,4 +1,6 @@
-import { ReactElement } from 'react';
+// src/components/Sidebar.tsx
+
+import { ReactElement, useState, useEffect } from 'react';
 import {
   Link,
   List,
@@ -12,13 +14,32 @@ import {
 import IconifyIcon from '../../../components/base/IconifyIcon';
 import logo from '../../../assets/logo/logo.png';
 import Image from '../../../components/base/Image';
-import navItems from '../../../../data/nav-items';
 import NavButton from './NavButton';
 
+import { NavItem } from '../../../../helpers/navItem';
+import { fetchNavItems } from '../../../../services/navService';
+
+/**
+ * llama a fetchNavItems()
+ * para poblar dinámicamente `navItems`. En modo desarrollo, si falla
+ * la llamada, fetchNavItems() retornará un menú de prueba.
+ */
 const Sidebar = (): ReactElement => {
+  const [navItems, setNavItems] = useState<NavItem[]>([]);
+
+  useEffect(() => {
+    fetchNavItems()
+      .then((items) => {
+        setNavItems(items);
+      })
+      .catch((err) => {
+        console.error('Error cargando navItems:', err);
+      });
+  }, []);
+
   return (
     <Stack
-      justifyContent="space-between"
+      justifyContent="flex-start"
       bgcolor="background.paper"
       height={1}
       boxShadow={(theme) => theme.shadows[4]}
@@ -32,23 +53,35 @@ const Sidebar = (): ReactElement => {
         width: 218,
       }}
     >
+      {/* Logo que direcciona a “/” */}
       <Link
         href="/"
         sx={{
-          position: 'fixed',
-          zIndex: 5,
+          display: 'block',
           mt: 6.25,
-          mx: 4.0625,
-          mb: 3.75,
+          mb: 1,
+          mx: 'auto',
           bgcolor: 'background.paper',
           borderRadius: 5,
+          width: 120,
+          position: 'relative',
+          zIndex: 5,
         }}
       >
-        <Image src={logo} width={1} />
+        <Image
+          src={logo}
+          sx={{
+            width: '100%',
+            height: 'auto',
+            display: 'block',
+            margin: '0 auto',
+          }}
+        />
       </Link>
+
       <Stack
         justifyContent="space-between"
-        mt={16.25}
+        mt={1}
         height={1}
         sx={{
           overflow: 'hidden',
@@ -58,6 +91,7 @@ const Sidebar = (): ReactElement => {
           width: 218,
         }}
       >
+        {/* Lista principal de NavButtons */}
         <List
           sx={{
             mx: 2.5,
@@ -70,6 +104,8 @@ const Sidebar = (): ReactElement => {
             <NavButton key={index} navItem={navItem} Link={Link} />
           ))}
         </List>
+
+        {/* Botón fijo de “Cerrar sesión” */}
         <List
           sx={{
             mx: 2.5,

@@ -19,21 +19,37 @@ const AuthLayout = lazy(async () => {
     new Promise((resolve) => setTimeout(resolve, 1000)),
   ]).then(([moduleExports]) => moduleExports);
 });
-
 const Error404 = lazy(async () => {
   await new Promise((resolve) => setTimeout(resolve, 500));
   return import('../pages/errors/Error404');
 });
-
 const Inicio = lazy(async () => {
   return Promise.all([
     import('../pages/PanelProfesor/Inicio'),
     new Promise((resolve) => setTimeout(resolve, 500)),
   ]).then(([moduleExports]) => moduleExports);
 });
-
 const Login = lazy(async () => import('../pages/autenticacion/Login'));
 const Prematricula = lazy(async () => import('../pages/autenticacion/prematricula'));
+
+const VistaSedes = lazy(async () => {
+  return Promise.all([
+    import('../pages/PanelProfesor/Sedes'),
+    new Promise((resolve) => setTimeout(resolve, 500)),
+  ]).then(([moduleExports]) => moduleExports);
+});
+const VistaCursos = lazy(async () => {
+  return Promise.all([
+    import('../pages/PanelProfesor/Cursos'),
+    new Promise((resolve) => setTimeout(resolve, 500)),
+  ]).then(([moduleExports]) => moduleExports);
+});
+const VistaAsignatura = lazy(async () => {
+  return Promise.all([
+    import('../pages/PanelProfesor/Asignatura'),
+    new Promise((resolve) => setTimeout(resolve, 500)),
+  ]).then(([moduleExports]) => moduleExports);
+});
 
 const routes: RouteObject[] = [
   {
@@ -43,7 +59,6 @@ const routes: RouteObject[] = [
       </Suspense>
     ),
     children: [
-      // Redirigir la ruta raíz directamente al panel de profesores
       {
         path: '/',
         element: <Navigate to={paths.home} replace />,
@@ -60,11 +75,26 @@ const routes: RouteObject[] = [
         children: [
           {
             index: true,
-            element: <Inicio />, // Muestra el panel de profesores por defecto
+            element: <Inicio />,
           },
           {
             path: paths.home,
             element: <Inicio />,
+          },
+          // Ruta para PanelProfesor/Sedes/:sedeId
+          {
+            path: 'PanelProfesor/Sedes/:sedeId',
+            element: <VistaSedes />,
+          },
+          // Ruta para PanelProfesor/Cursos/:cursoId
+          {
+            path: 'PanelProfesor/Cursos/:cursoId',
+            element: <VistaCursos />,
+          },
+          // Ruta para PanelProfesor/Asignatura/:materiaId
+          {
+            path: 'PanelProfesor/Asignatura/:materiaId',
+            element: <VistaAsignatura />,
           },
         ],
       },
