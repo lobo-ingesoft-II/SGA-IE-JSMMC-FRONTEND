@@ -188,23 +188,47 @@ const SignUp: React.FC = () => {
     }));
   };
 
-  // Envío del formulario (conexión a FastAPI)
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      // Cambia la URL por la de tu backend
-      const response = await fetch('http://localhost:8000/prematriculas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      if (!response.ok) throw new Error('Error al registrar estudiante');
-      alert('Estudiante registrado correctamente');
-      setForm(initialForm);
-    } catch (error) {
-      alert('Hubo un error al registrar el estudiante');
-    }
-  };
+ // Envío del formulario (conexión a FastAPI + descarga automática de PDF)
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    // 1) Creamos el registro y extraemos el nuevo documento
+    const res1 = await fetch('http://localhost:8010/pre_registration', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
+    if (!res1.ok) throw new Error(`Error al registrar (${res1.status})`);
+    const doc = await res1.json();          // p. ej. { _id: "68461bbbde5cb0997ac3b578", ... }
+    const id  = doc._id;                    // <-- aquí tomamos _id
+
+    alert('Estudiante registrado correctamente');
+    setForm(initialForm);
+
+    // 2) Ahora solicitamos el PDF al servicio de PDF (puerto 8015)
+    const res2 = await fetch(`http://localhost:8015/pdf_pre_registro/${id}`, {
+      method: 'POST',
+    });
+    if (!res2.ok) throw new Error(`Error al generar PDF (${res2.status})`);
+
+    // 3) Convertimos la respuesta a blob y forzamos la descarga
+    const blob = await res2.blob();
+    const url  = window.URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `pre_registro_${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+  } catch (err) {
+    console.error(err);
+    alert('Hubo un error al registrar el estudiante o descargar el PDF');
+  }
+};
+
+
 
   return (
     <Paper
