@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-=======
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
@@ -42,7 +40,7 @@ import {
   AddComment as AddCommentIcon,
 } from '@mui/icons-material';
 
-import { EstudianteAsignatura } from '../../../../../../models/PanelProfesor/estudianteAsignatura';
+import { EstudianteAsignatura } from '../../../../../../models//PanelProfesor/estudianteAsignatura';
 import { AsistenciaRegistro } from '../../../../../../models/PanelProfesor/asistencia';
 import { CalificacionRegistro } from '../../../../../../models/PanelProfesor/calificacion';
 import { MateriaDetalle, getMateriaDetalle, updateAsistencia, updateCalificacion, getProfesorActual, checkIfEditionIsLocked } from '../../../../../../services/PanelProfesor/asignaturaService';
@@ -531,4 +529,3 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
 };
 
 export default VistaAsignatura;
->>>>>>> Stashed changes

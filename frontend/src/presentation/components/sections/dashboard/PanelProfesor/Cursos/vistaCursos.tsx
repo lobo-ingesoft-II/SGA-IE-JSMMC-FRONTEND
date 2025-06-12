@@ -25,21 +25,12 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
-<<<<<<< Updated upstream
-import { Curso } from '../../../../../../models/curso';
-import { Sede } from '../../../../../../models/sede';
-import { Materia } from '../../../../../../models/materia';
-import { Estudiante } from '../../../../../../models/estudiante';
-import { getAllCursos } from '../../../../../../services/cursoService';
-import { getEstudiantesPorCurso } from '../../../../../../services/estudianteService';
-=======
 import { Curso } from '../../../../../../models/PanelProfesor/curso';
 import { Sede } from '../../../../../../models/PanelProfesor/sede';
 import { Materia } from '../../../../../../models/PanelProfesor/materia'; 
 import { Estudiante } from '../../../../../../models/PanelProfesor/estudiante'; 
 import { getAllCursos } from '../../../../../../services/PanelProfesor/cursoService';
 import { getEstudiantesPorCurso } from '../../../../../../services/PanelProfesor/estudianteService'; 
->>>>>>> Stashed changes
 
 interface CursoConSede extends Curso {
   sede: Sede;
