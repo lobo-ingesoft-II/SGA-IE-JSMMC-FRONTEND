@@ -17,7 +17,7 @@ import Image from '../../../components/base/Image';
 import NavButton from './NavButton';
 
 import { NavItem } from '../../../../helpers/navItem';
-import { fetchNavItems } from '../../../../services/navService';
+import { fetchNavItems } from '../../../../services/PanelProfesor/navService';
 
 /**
  * llama a fetchNavItems()

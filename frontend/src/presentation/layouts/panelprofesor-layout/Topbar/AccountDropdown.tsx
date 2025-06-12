@@ -1,35 +1,26 @@
-import {
-  Avatar,
-  Button,
-  Divider,
-  ListItemIcon,
-  ListItemText,
-  Menu,
-  MenuItem,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import IconifyIcon from '../../../components/base/IconifyIcon';
-import { MouseEvent, ReactElement, useState } from 'react';
-import profile from '../../../assets/profile/profile.jpg';
+"use client"
+
+import { Avatar, Button, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography } from "@mui/material"
+import IconifyIcon from "../../../components/base/IconifyIcon"
+import { type MouseEvent, type ReactElement, useState } from "react"
 
 const AccountDropdown = (): ReactElement => {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const open = Boolean(anchorEl)
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+    setAnchorEl(event.currentTarget)
+  }
   const handleClose = () => {
-    setAnchorEl(null);
-  };
+    setAnchorEl(null)
+  }
   return (
     <>
       <Button
         color="inherit"
         id="account-dropdown-button"
-        aria-controls={open ? 'account-dropdown-menu' : undefined}
+        aria-controls={open ? "account-dropdown-menu" : undefined}
         aria-haspopup="true"
-        aria-expanded={open ? 'true' : undefined}
+        aria-expanded={open ? "true" : undefined}
         onClick={handleClick}
         sx={{
           borderRadius: 2,
@@ -39,14 +30,18 @@ const AccountDropdown = (): ReactElement => {
         }}
       >
         <Tooltip title="Aiden Max" placement="top" arrow enterDelay={0} leaveDelay={0}>
-          <Avatar alt="Aiden Max" src={profile} sx={{ width: 45, height: 45 }} />
+          <Avatar
+            alt="Aiden Max"
+            sx={{
+              width: 45,
+              height: 45,
+              bgcolor: "primary.main",
+            }}
+          >
+            <IconifyIcon icon="mdi:account" width={24} height={24} color="white" />
+          </Avatar>
         </Tooltip>
-        <Typography
-          variant="body1"
-          component="p"
-          color="text.primary"
-          display={{ xs: 'none', sm: 'block' }}
-        >
+        <Typography variant="body1" component="p" color="text.primary" display={{ xs: "none", sm: "block" }}>
           Aiden Max
         </Typography>
         <IconifyIcon
@@ -54,7 +49,7 @@ const AccountDropdown = (): ReactElement => {
           width={24}
           height={24}
           color="text.primary"
-          display={{ xs: 'none', sm: 'block' }}
+          display={{ xs: "none", sm: "block" }}
         />
       </Button>
       <Menu
@@ -63,10 +58,10 @@ const AccountDropdown = (): ReactElement => {
         open={open}
         onClose={handleClose}
         MenuListProps={{
-          'aria-labelledby': 'account-dropdown-button',
+          "aria-labelledby": "account-dropdown-button",
         }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
         <MenuItem onClick={handleClose}>
           <ListItemIcon>
@@ -74,7 +69,7 @@ const AccountDropdown = (): ReactElement => {
           </ListItemIcon>
           <ListItemText
             sx={(theme) => ({
-              '& .MuiListItemText-primary': {
+              "& .MuiListItemText-primary": {
                 fontSize: theme.typography.body1.fontSize,
                 fontFamily: theme.typography.body1.fontFamily,
                 fontWeight: theme.typography.body1.fontWeight,
@@ -90,7 +85,7 @@ const AccountDropdown = (): ReactElement => {
           </ListItemIcon>
           <ListItemText
             sx={(theme) => ({
-              '& .MuiListItemText-primary': {
+              "& .MuiListItemText-primary": {
                 fontSize: theme.typography.body1.fontSize,
                 fontFamily: theme.typography.body1.fontFamily,
                 fontWeight: theme.typography.body1.fontWeight,
@@ -102,7 +97,7 @@ const AccountDropdown = (): ReactElement => {
         </MenuItem>
       </Menu>
     </>
-  );
-};
+  )
+}
 
-export default AccountDropdown;
+export default AccountDropdown

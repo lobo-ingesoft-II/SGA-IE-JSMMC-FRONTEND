@@ -19,10 +19,10 @@ import {
   Place as PlaceIcon
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSedeAndCursos, CursoConSede } from '../../../../../../services/sedeService';
-import { Sede } from '../../../../../../models/sede';
-import { Curso } from '../../../../../../models/curso';
-import { Materia } from '../../../../../../models/materia';
+import { getSedeAndCursos, CursoConSede } from '../../../../../../services/PanelProfesor/sedeService';
+import { Sede } from '../../../../../../models/PanelProfesor/sede';
+import { Curso } from '../../../../../../models/PanelProfesor/curso';
+import { Materia } from '../../../../../../models/PanelProfesor/materia';
 
 const VistaSedes = () => {
   const { sedeId } = useParams<{ sedeId: string }>();

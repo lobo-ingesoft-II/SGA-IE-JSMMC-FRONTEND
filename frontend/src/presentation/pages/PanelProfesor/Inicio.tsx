@@ -3,9 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import VistaSedes from '../../components/sections/dashboard/PanelProfesor/Sedes/vistaSedes';
 import { useAuth } from '../../../context/authContext';
 
+<<<<<<< Updated upstream
 const Sedes = (): ReactElement | null => {
   const { user } = useAuth();
   const navigate = useNavigate();
+=======
+import { getProfesorInicioData, ProfesorInicioData } from '../../../services//PanelProfesor/inicioService';
+
+const Inicio: React.FC = () => {
+  const theme = useTheme();
+  const [profesorData, setProfesorData] = useState<ProfesorInicioData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+>>>>>>> Stashed changes
 
   /*
   useEffect(() => {
@@ -35,4 +45,8 @@ const Sedes = (): ReactElement | null => {
   );
 };
 
+<<<<<<< Updated upstream
 export default Sedes;
+=======
+export default Inicio;
+>>>>>>> Stashed changes
