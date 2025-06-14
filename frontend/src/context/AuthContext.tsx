@@ -1,11 +1,8 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-//
-// Tipo de usuario que guardaremos en el contexto y en localStorage.
-// name = nombre completo / identificador visible.
-// role = 'admin' | 'profesor' | 'acudiente' | ...
-//
+// Tipo de usuario con ID incluido
 export type User = {
+  id: number; // Nuevo campo: ID del usuario
   name: string;
   role: 'admin' | 'profesor' | 'acudiente' | string;
 };
@@ -15,49 +12,34 @@ type AuthContextType = {
   user: User | null;
   login: (token: string, userData: User) => void;
   logout: () => void;
+  initialized: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // 1) Estado para el token: determinamos si hay token en localStorage
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return !!localStorage.getItem('token');
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
-  // 2) Estado para el objeto `user`. Lo cargamos de localStorage (si existe).
-  const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem('user');
-    if (stored) {
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+
+    if (token && userData) {
       try {
-        return JSON.parse(stored) as User;
+        const parsedUser: User = JSON.parse(userData);
+        setUser(parsedUser);
+        setIsAuthenticated(true);
       } catch {
-        return null;
+        setUser(null);
+        setIsAuthenticated(false);
       }
     }
-    return null;
-  });
 
-  // 3) Sincronizar en caso de que otra pestaña modifique localStorage
-  useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'token') {
-        const hasToken = !!localStorage.getItem('token');
-        setIsAuthenticated(hasToken);
-      }
-      if (e.key === 'user') {
-        const u = localStorage.getItem('user');
-        setUser(u ? (JSON.parse(u) as User) : null);
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    setInitialized(true);
   }, []);
 
-  /**
-   * login: guarda token y userData en localStorage,
-   * actualiza los estados isAuthenticated y user.
-   */
   const login = (token: string, userData: User) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
@@ -65,9 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
   };
 
-  /**
-   * logout: elimina token y user de localStorage, reinicia estados.
-   */
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -76,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, initialized }}>
       {children}
     </AuthContext.Provider>
   );

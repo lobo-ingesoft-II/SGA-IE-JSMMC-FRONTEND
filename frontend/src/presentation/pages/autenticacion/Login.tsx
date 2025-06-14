@@ -9,12 +9,12 @@ import {
   Stack,
   TextField,
   Typography,
-  Snackbar,
-  Alert,
   Box,
   InputLabel,
   FormControl,
 } from '@mui/material';
+import MuiAlert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import loginBanner from '../../assets/authentication-banners/login.png';
 import IconifyIcon from '../../components/base/IconifyIcon';
@@ -22,14 +22,13 @@ import logo from '../../assets/logo/logo.png';
 import Image from '../../components/base/Image';
 import { useAuth } from '../../../context/authContext';
 
-// Buenas prácticas: separar el estado del formulario y el handler
 type LoginForm = {
-  username: string;
+  email: string;
   password: string;
 };
 
 const initialForm: LoginForm = {
-  username: '',
+  email: '',
   password: '',
 };
 
@@ -39,12 +38,10 @@ const Login = (): ReactElement => {
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [openSnackbar, setOpenSnackbar] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // Handler genérico para los campos
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({
@@ -55,44 +52,59 @@ const Login = (): ReactElement => {
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
 
-  // Preparado para FastAPI
-  const handleLogin = async () => {
-    setLoading(true);
-    setLoginError(null);
-    setLoginSuccess(false);
-    try {
-      const response = await fetch('http://localhost:8000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(form),
-      });
+  const handleLogin = async (e?: React.FormEvent) => {
+  if (e) e.preventDefault();
+  setLoading(true);
+  setLoginError(null);
+  setLoginSuccess(false);
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.access_token) {
-          login(data.access_token);
-          setLoginSuccess(true);
-          setLoginError(null);
-          navigate('/home', { replace: true });
-        } else {
-          setLoginError('Respuesta inválida del servidor');
-        }
-      } else {
-        const data = await response.json();
-        setLoginError(data.detail || 'Error al iniciar sesión');
-      }
-    } catch (error) {
-      setLoginError('No se pudo conectar con el servidor');
-      setOpenSnackbar(true);
-    } finally {
-      setLoading(false);
+  try {
+    const response = await fetch('http://localhost:8009/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: form.email,
+        contrasena: form.password,
+      }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      setLoginError(data.detail || 'Error al iniciar sesión');
+      return;
     }
-  };
+
+    const data = await response.json();
+    const { access_token, rol, id, correo } = data;
+
+    const userData = {
+      id,         // ✅ <-- asegúrate de incluir el ID recibido del backend
+      name: correo,
+      role: rol,
+    };
+
+    login(access_token, userData);
+    setLoginSuccess(true);
+
+    // Redirigir según rol e ID
+    let ruta = '/';
+    if (rol === 'administrador') ruta = `/PanelAdministrador/${id}/Inicio`;
+    else if (rol === 'profesor') ruta = `/PanelProfesor/${id}/Inicio`;
+    else if (rol === 'acudiente') ruta = `/PanelAcudiente/${id}/Inicio`;
+
+    navigate(ruta, { replace: true });
+  } catch (error) {
+    setLoginError('No se pudo conectar con el servidor');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleCloseSnackbar = () => {
-    setOpenSnackbar(false);
+    setLoginError(null);
   };
 
   return (
@@ -110,7 +122,6 @@ const Login = (): ReactElement => {
     >
       {/* Lado formulario */}
       <Stack flex={1} m={2.5} gap={3} alignItems="center">
-        {/* Logo centrado + título */}
         <Stack alignItems="center" gap={1}>
           <Image src={logo} width={82.6} alt="Logo" />
           <Typography variant="h6" textAlign="center" fontWeight="bold">
@@ -119,105 +130,101 @@ const Login = (): ReactElement => {
         </Stack>
 
         <Box sx={{ width: '100%', maxWidth: 330 }}>
-          <Stack alignItems="center" gap={2.5}>
-            <Typography variant="h3" textAlign="center">
-              Iniciar sesión
-            </Typography>
+          <form onSubmit={handleLogin} autoComplete="on">
+            <Stack alignItems="center" gap={2.5}>
+              <Typography variant="h3" textAlign="center">
+                Iniciar sesión
+              </Typography>
 
-            {/* Campo de usuario */}
-            <TextField
-              variant="filled"
-              label="Código de usuario"
-              placeholder="Ingresa tu código de usuario"
-              id="username"
-              name="username"
-              fullWidth
-              value={form.username}
-              onChange={handleChange}
-              disabled={loading}
-              InputLabelProps={{ shrink: true }}
-              autoComplete="username"
-            />
-
-            {/* Campo de contraseña */}
-            <FormControl variant="outlined" fullWidth>
-              <InputLabel shrink htmlFor="password">
-                Contraseña
-              </InputLabel>
-              <OutlinedInput
-                placeholder="********"
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                endAdornment={
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleClickShowPassword}
-                      edge="end"
-                      sx={{ color: 'text.secondary' }}
-                    >
-                      <IconifyIcon icon={showPassword ? 'ic:baseline-key-off' : 'ic:baseline-key'} />
-                    </IconButton>
-                  </InputAdornment>
-                }
+              <TextField
+                variant="filled"
+                label="Correo electrónico"
+                placeholder="Ingresa tu correo"
+                id="email"
+                name="email"
                 fullWidth
+                value={form.email}
+                onChange={handleChange}
                 disabled={loading}
-                label="Contraseña"
-                autoComplete="current-password"
+                InputLabelProps={{ shrink: true }}
+                autoComplete="username"
               />
-            </FormControl>
 
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={handleLogin}
-              disabled={loading || !form.username || !form.password}
-            >
-              {loading ? 'Ingresando...' : 'Log in'}
-            </Button>
+              <FormControl variant="outlined" fullWidth>
+                <InputLabel shrink htmlFor="password">
+                  Contraseña
+                </InputLabel>
+                <OutlinedInput
+                  placeholder="********"
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  endAdornment={
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={handleClickShowPassword}
+                        edge="end"
+                        sx={{ color: 'text.secondary' }}
+                      >
+                        <IconifyIcon
+                          icon={showPassword ? 'ic:baseline-key-off' : 'ic:baseline-key'}
+                        />
+                      </IconButton>
+                    </InputAdornment>
+                  }
+                  fullWidth
+                  disabled={loading}
+                  label="Contraseña"
+                  autoComplete="current-password"
+                />
+              </FormControl>
 
-            {loginSuccess && (
-              <Typography variant="body1" color="success.main" mt={2}>
-                ¡Credenciales correctas! Has iniciado sesión exitosamente.
-              </Typography>
-            )}
-
-            {loginError && loginError !== 'No se pudo conectar con el servidor' && (
-              <Typography variant="body1" color="error.main" mt={2}>
-                {loginError}
-              </Typography>
-            )}
-
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-                textAlign: 'center',
-                width: '100%',
-                mt: 1,
-              }}
-            >
-              Inscribirse como nuevo estudiante{' '}
-              <Link
-                component={RouterLink}
-                to="/autenticacion/prematricula"
-                underline="hover"
-                sx={{ ml: 0.5 }}
+              <Button
+                variant="contained"
+                fullWidth
+                type="submit"
+                disabled={loading || !form.email || !form.password}
               >
-                Formulario prematrícula
-              </Link>
-            </Typography>
-          </Stack>
+                {loading ? 'Ingresando...' : 'Log in'}
+              </Button>
+
+              {loginSuccess && (
+                <Typography variant="body1" color="success.main" mt={2}>
+                  ¡Credenciales correctas! Has iniciado sesión exitosamente.
+                </Typography>
+              )}
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  width: '100%',
+                  mt: 1,
+                }}
+              >
+                Inscribirse como nuevo estudiante{' '}
+                <Link
+                  component={RouterLink}
+                  to="/autenticacion/prematricula"
+                  underline="hover"
+                  sx={{ ml: 0.5 }}
+                >
+                  Formulario prematrícula
+                </Link>
+              </Typography>
+            </Stack>
+          </form>
         </Box>
       </Stack>
 
-      {/* Lado banner (oculto en móvil) */}
+      {/* Lado banner */}
       <Suspense
         fallback={
           <Skeleton
@@ -239,15 +246,31 @@ const Login = (): ReactElement => {
         />
       </Suspense>
 
+      {/* Snackbar de error */}
       <Snackbar
-        open={openSnackbar}
-        autoHideDuration={4000}
+        open={!!loginError}
+        autoHideDuration={5000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
-          No se pudo conectar con el servidor
-        </Alert>
+        <MuiAlert
+          onClose={handleCloseSnackbar}
+          severity="error"
+          elevation={6}
+          variant="filled"
+          action={
+            <IconButton
+              size="small"
+              aria-label="close"
+              onClick={handleCloseSnackbar}
+              sx={{ color: 'black' }}
+            >
+              ✕
+            </IconButton>
+          }
+        >
+          {loginError}
+        </MuiAlert>
       </Snackbar>
     </Stack>
   );

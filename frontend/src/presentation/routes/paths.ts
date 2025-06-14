@@ -2,12 +2,7 @@ export const rootPaths = {
   homeRoot: '',
   pagesRoot: 'pages',
   
-  applicationsRoot: 'applications',
-  ecommerceRoot: 'ecommerce',
   authRoot: 'autenticacion',
-  notificationsRoot: 'notifications',
-  calendarRoot: 'calendar',
-  messageRoot: 'messages',
   errorRoot: 'error',
 };
 

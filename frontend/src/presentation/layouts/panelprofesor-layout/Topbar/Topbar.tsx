@@ -1,7 +1,6 @@
-"use client"
-
 import type { MouseEventHandler, ReactElement } from "react"
-import { AppBar, Badge, IconButton, Link, Stack, Toolbar, Typography } from "@mui/material"
+
+import { AppBar, IconButton, Link, Stack, Toolbar, Typography } from "@mui/material"
 import IconifyIcon from "../../../components/base/IconifyIcon"
 import { drawerWidth } from ".."
 
@@ -73,7 +72,7 @@ const Topbar = ({ handleDrawerToggle }: TopbarProps): ReactElement => {
           flex={"1 1 auto"}
         >
           <Typography variant="h5" component="h5">
-            IED Josué Manrique - Panel de educadores
+            IED Josué Manrique - Panel de Docentes
           </Typography>
         </Stack>
         <Stack direction="row" alignItems="center" gap={{ xs: 1, sm: 1.75 }}>

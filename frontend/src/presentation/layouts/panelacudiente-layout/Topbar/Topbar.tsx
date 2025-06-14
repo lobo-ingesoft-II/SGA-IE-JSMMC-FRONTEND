@@ -1,31 +1,20 @@
-import { MouseEventHandler, ReactElement } from 'react';
-import {
-  AppBar,
-  Badge,
-  IconButton,
-  InputAdornment,
-  Link,
-  Stack,
-  TextField,
-  Toolbar,
-  Typography,
-} from '@mui/material';
-import IconifyIcon from '../../../components/base/IconifyIcon';
-import { drawerWidth } from '..';
+import type { MouseEventHandler, ReactElement } from "react"
 
-import { useLocation } from 'react-router-dom';
-import capitalizePathname from '../../../../helpers/capitalize-pathname';
-import AccountDropdown from './AccountDropdown';
-import Image from '../../../components/base/Image';
-import logo from '../../../assets/logo/logo.png';
+import { AppBar, IconButton, Link, Stack, Toolbar, Typography } from "@mui/material"
+import IconifyIcon from "../../../components/base/IconifyIcon"
+import { drawerWidth } from ".."
+
+import { useLocation } from "react-router-dom"
+import capitalizePathname from "../../../../helpers/capitalize-pathname"
+import AccountDropdown from "./AccountDropdown"
 
 interface TopbarProps {
-  handleDrawerToggle: MouseEventHandler;
+  handleDrawerToggle: MouseEventHandler
 }
 
 const Topbar = ({ handleDrawerToggle }: TopbarProps): ReactElement => {
-  const { pathname } = useLocation();
-  const title = capitalizePathname(pathname);
+  const { pathname } = useLocation()
+  const title = capitalizePathname(pathname)
 
   return (
     <AppBar
@@ -40,9 +29,9 @@ const Topbar = ({ handleDrawerToggle }: TopbarProps): ReactElement => {
         }}
       >
         <Stack direction="row" gap={1}>
-          <Link href="/" width={40} height={40} display={{ xs: 'block', lg: 'none' }}>
-            <IconButton color="inherit" sx={{ p: 0.75, bgcolor: 'inherit' }}>
-              <Image src={logo} width={1} height={1} />
+          <Link href="/" width={40} height={40} display={{ xs: "block", lg: "none" }}>
+            <IconButton color="inherit" sx={{ p: 0.75, bgcolor: "inherit" }}>
+              <IconifyIcon icon="mdi:school" width={24} height={24} />
             </IconButton>
           </Link>
           <IconButton
@@ -55,8 +44,8 @@ const Topbar = ({ handleDrawerToggle }: TopbarProps): ReactElement => {
               height: 40,
               m: 0,
               p: 0.75,
-              display: { lg: 'none' },
-              bgcolor: 'inherit',
+              display: { lg: "none" },
+              bgcolor: "inherit",
             }}
           >
             <IconifyIcon icon="mdi:menu" />
@@ -67,36 +56,31 @@ const Topbar = ({ handleDrawerToggle }: TopbarProps): ReactElement => {
               width: 40,
               height: 40,
               p: 1,
-              display: { xs: 'flex', lg: 'none' },
-              mr: 'auto',
-              bgcolor: 'inherit',
+              display: { xs: "flex", lg: "none" },
+              mr: "auto",
+              bgcolor: "inherit",
             }}
           >
             <IconifyIcon icon="mdi:search" width={1} height={1} />
           </IconButton>
         </Stack>
         <Stack
-          display={{ xs: 'none', lg: 'flex' }}
+          display={{ xs: "none", lg: "flex" }}
           direction="row"
           gap={{ lg: 6.25 }}
           alignItems="center"
-          flex={'1 1 auto'}
+          flex={"1 1 auto"}
         >
           <Typography variant="h5" component="h5">
-            {pathname === '/' ? 'Panel de control ' : title}
+            IED Josué Manrique - Panel de Acudientes
           </Typography>
         </Stack>
         <Stack direction="row" alignItems="center" gap={{ xs: 1, sm: 1.75 }}>
-          <IconButton color="inherit" centerRipple sx={{ bgcolor: 'inherit', p: 0.75 }}>
-            <Badge badgeContent={1} color="primary">
-              <IconifyIcon icon="carbon:notification-filled" width={24} height={24} />
-            </Badge>
-          </IconButton>
           <AccountDropdown />
         </Stack>
       </Toolbar>
     </AppBar>
-  );
-};
+  )
+}
 
-export default Topbar;
+export default Topbar

@@ -18,13 +18,19 @@ import NavButton from './NavButton';
 
 import { NavItem } from '../../../../helpers/navItem';
 import { fetchNavItems } from '../../../../services/PanelProfesor/navService';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../../context/authContext'; // Asegúrate que esta ruta sea correcta
+
 
 /**
  * llama a fetchNavItems()
  * para poblar dinámicamente `navItems`. En modo desarrollo, si falla
  * la llamada, fetchNavItems() retornará un menú de prueba.
  */
+
 const Sidebar = (): ReactElement => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [navItems, setNavItems] = useState<NavItem[]>([]);
 
   useEffect(() => {
@@ -106,20 +112,25 @@ const Sidebar = (): ReactElement => {
         </List>
 
         {/* Botón fijo de “Cerrar sesión” */}
-        <List
-          sx={{
-            mx: 2.5,
-          }}
-        >
-          <ListItem
-            sx={{
-              mx: 0,
-              my: 2.5,
-            }}
-          >
+        <List sx={{ mx: 2.5 }}>
+          <ListItem sx={{ mx: 0, my: 2.5 }}>
             <ListItemButton
-              LinkComponent={Link}
-              href="/"
+              onClick={async () => {
+                const token = localStorage.getItem('token');
+                try {
+                  await fetch('http://localhost:8009/logout', {
+                    method: 'POST',
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                  });
+                } catch (error) {
+                  console.error('Error al cerrar sesión:', error);
+                } finally {
+                  logout(); // Limpia sesión del frontend
+                  navigate('/autenticacion/login', { replace: true }); // Redirige
+                }
+              }}
               sx={{
                 backgroundColor: 'background.paper',
                 color: 'primary.main',

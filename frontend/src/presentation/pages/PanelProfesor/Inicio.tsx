@@ -10,8 +10,6 @@ import {
   Chip,
   List,
   ListItem,
-  ListItemIcon,
-  ListItemText,
   Avatar
 } from '@mui/material';
 import {
@@ -24,13 +22,26 @@ import {
   Dashboard as DashboardIcon
 } from '@mui/icons-material';
 
+import { useNavigate, useParams } from 'react-router-dom';
 import { getProfesorInicioData, ProfesorInicioData } from '../../../services/PanelProfesor/inicioService';
+import { useAuth } from '../../../context/authContext';
 
 const Inicio: React.FC = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
+  const { inicioId } = useParams();
+  const { user } = useAuth();
+
   const [profesorData, setProfesorData] = useState<ProfesorInicioData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Protección contra acceso a otro ID
+  useEffect(() => {
+    if (user?.id && String(inicioId) !== String(user.id)) {
+      navigate(`/PanelProfesor/${user.id}/Inicio`, { replace: true });
+    }
+  }, [inicioId, user, navigate]);
 
   useEffect(() => {
     async function fetchData() {
@@ -75,33 +86,22 @@ const Inicio: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3, width: '100%' }}> 
+    <Box sx={{ p: 3, width: '100%' }}>
       <Typography variant="h5" component="h1" gutterBottom sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
         <DashboardIcon sx={{ mr: 1 }} />
         Bienvenido al Panel de Profesor, {profesorData.nombre}
       </Typography>
-      
-      <Grid container spacing={1} sx={{ width: '100%', m: 0 }}> 
-        {/* Tarjeta de Información Personal */}
-        {/* Usamos Box para simular el Grid item, manteniendo width: '100%' para que ocupe todo el ancho */}
-        <Box sx={{ width: '100%', p: 1.5 }}> {/* p:1.5 para compensar el spacing del Grid container */}
-          <Paper
-            elevation={2} 
-            sx={{
-              mb: 2, // Margen inferior 
-              borderRadius: 3,
-              overflow: 'hidden',
-              borderLeft: `4px solid ${theme.palette.primary.main}`,
-            }}
-          >
-            {/* Encabezado de la tarjeta con fondo y título */}
-            <Box sx={{ p: 2, backgroundColor: theme.palette.action.selected, width: '100%'}}>
+
+      <Grid container spacing={1} sx={{ width: '100%', m: 0 }}>
+        {/* Información Personal */}
+        <Box sx={{ width: '100%', p: 1.5 }}>
+          <Paper elevation={2} sx={{ mb: 2, borderRadius: 3, overflow: 'hidden', borderLeft: `4px solid ${theme.palette.primary.main}` }}>
+            <Box sx={{ p: 2, backgroundColor: theme.palette.action.selected }}>
               <Typography variant="h5" component="h3" sx={{ display: 'flex', alignItems: 'center' }}>
                 <PersonIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
                 Información Personal
               </Typography>
             </Box>
-            {/* Contenido de la tarjeta */}
             <Box sx={{ p: 3 }}>
               <Stack spacing={1}>
                 <Box display="flex" alignItems="center">
@@ -121,25 +121,15 @@ const Inicio: React.FC = () => {
           </Paper>
         </Box>
 
-        {/* Tarjeta de Asignaciones */}
-        <Box sx={{ width: '100%', p: 1.5 }}> 
-          <Paper
-            elevation={2} 
-            sx={{
-              mb: 2, // Margen inferior
-              borderRadius: 3,
-              overflow: 'hidden',
-              borderLeft: `4px solid ${theme.palette.secondary.main}`, // Borde izquierdo con color secundario
-            }}
-          >
-            {/* Encabezado de la tarjeta con fondo y título */}
+        {/* Asignaciones */}
+        <Box sx={{ width: '100%', p: 1.5 }}>
+          <Paper elevation={2} sx={{ mb: 2, borderRadius: 3, overflow: 'hidden', borderLeft: `4px solid ${theme.palette.secondary.main}` }}>
             <Box sx={{ p: 2, backgroundColor: theme.palette.action.selected }}>
               <Typography variant="h5" component="h3" sx={{ display: 'flex', alignItems: 'center' }}>
                 <SchoolIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
                 Tus Asignaciones
               </Typography>
             </Box>
-            {/* Contenido de la tarjeta */}
             <Box sx={{ p: 3 }}>
               <Typography variant="h5" sx={{ mt: 2, mb: 1 }}>Sedes Asignadas:</Typography>
               <Stack direction="row" spacing={1} flexWrap="wrap">

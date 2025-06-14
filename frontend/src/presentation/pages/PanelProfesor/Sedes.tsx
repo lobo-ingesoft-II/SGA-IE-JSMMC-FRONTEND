@@ -4,18 +4,6 @@ import VistaSedes from '../../components/sections/dashboard/PanelProfesor/Sedes/
 import { useAuth } from '../../../context/authContext';
 
 const Sedes = (): ReactElement | null => {
-  /*
-  useEffect(() => {
-    if (!user) {
-      // Redirigir al login si no está autenticado
-      navigate('/autenticacion/Login'); 
-    }
-  }, [user, navigate]);
-
-  // Evita renderizar mientras verifica
-  if (!user) return null;
-  */
-
   return (
     <div style={{
       position: 'absolute',
