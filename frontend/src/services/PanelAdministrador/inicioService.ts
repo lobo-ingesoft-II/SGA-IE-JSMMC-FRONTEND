@@ -1,4 +1,3 @@
-// Definimos una interfaz para los datos del admin que se mostrarán en la página de inicio
 export interface AdminInicioData {
   id: string;
   nombre: string;

@@ -1,4 +1,3 @@
-// Definimos una interfaz para los datos del profesor que se mostrarán en la página de inicio
 export interface ProfesorInicioData {
   id: string;
   nombre: string;

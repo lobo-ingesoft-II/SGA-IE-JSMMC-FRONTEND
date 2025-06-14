@@ -1,5 +1,3 @@
-// src/components/Sidebar.tsx
-
 import { ReactElement, useState, useEffect } from 'react';
 import {
   Link,

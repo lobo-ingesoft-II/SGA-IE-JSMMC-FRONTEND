@@ -1,4 +1,3 @@
-// Importamos el tipo Estudiante desde el modelo local
 import { Estudiante } from '../../models/PanelProfesor/estudiante';
 
 /**

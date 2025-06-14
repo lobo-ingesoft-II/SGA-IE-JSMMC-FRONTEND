@@ -1,4 +1,3 @@
-// Importamos los tipos de datos base usados en el frontend
 import { Curso } from '../../models/PanelProfesor/curso';
 import { Sede } from '../../models/PanelProfesor/sede';
 

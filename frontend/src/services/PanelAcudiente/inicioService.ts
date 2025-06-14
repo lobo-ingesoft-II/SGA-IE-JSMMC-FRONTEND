@@ -1,4 +1,3 @@
-// Definimos una interfaz para los datos del acudiente que se mostrarán en la página de inicio
 export interface AcudienteInicioData {
   id: string;
   nombre: string;
