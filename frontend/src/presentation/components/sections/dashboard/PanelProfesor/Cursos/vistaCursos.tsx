@@ -69,7 +69,6 @@ const VistaCursos = () => {
         const fakeSede1: Sede = {
           id: 's1',
           nombre: 'Sede Norte',
-          direccion: 'Calle Falsa 123'
         };
 
         const fakeCursos: CursoConSede[] = [

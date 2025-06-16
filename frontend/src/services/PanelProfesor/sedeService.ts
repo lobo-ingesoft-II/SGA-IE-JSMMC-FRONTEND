@@ -3,6 +3,7 @@ import { Curso } from '../../models/PanelProfesor/curso';
 
 export interface CursoConSede extends Curso {
   sede: Sede;
+  anioLectivo: number;
 }
 
 export async function getSedeAndCursos(
@@ -10,85 +11,69 @@ export async function getSedeAndCursos(
 ): Promise<{ sede: Sede; cursos: CursoConSede[] }> {
   let sede: Sede;
 
-  // Intentar cargar la sede
+  // 1. Obtener la sede
   try {
     const sedeRes = await fetch(`http://localhost:8007/sedes/${sedeId}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
 
-    if (!sedeRes.ok) {
-      throw new Error(`No se pudo obtener la sede. Status ${sedeRes.status}`);
-    }
-
+    if (!sedeRes.ok) throw new Error(`Sede status ${sedeRes.status}`);
     const sedeRaw = await sedeRes.json();
 
     sede = {
-      id: sedeRaw.id_sede,
-      nombre: sedeRaw.nombre,
+      id: sedeRaw.id_sede.toString(),
+      nombre: sedeRaw.nombre
     };
-
-    console.log(`✅ URL llamada: http://localhost:8007/sedes/${sedeId}`);
-    console.log('✅ Sede recibida:', sede);
   } catch (error: any) {
-    console.error('❌ Error al obtener la sede →', error.message);
+    console.error('❌ Error al obtener la sede:', error.message);
     return {
       sede: {
         id: sedeId,
-        nombre: 'Nombre no disponible',
+        nombre: 'Sede desconocida'
       },
       cursos: []
     };
   }
 
-  // Intentar cargar los cursos
+  // 2. Obtener cursos del profesor (ID fijo: 2)
   try {
-    const cursosRes = await fetch(`http://localhost:8007/sedes/${sedeId}/cursos`, {
+    const profesorId = 2;
+
+    const cursosRes = await fetch(`http://127.0.0.1:8004/cursos/profesores/${profesorId}/cursos`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
 
-    if (!cursosRes.ok) {
-      throw new Error(`No se pudo obtener los cursos. Status ${cursosRes.status}`);
-    }
-
+    if (!cursosRes.ok) throw new Error(`Cursos status ${cursosRes.status}`);
     const cursosRaw = await cursosRes.json();
 
-    const cursos: CursoConSede[] = cursosRaw.map((c: any) => ({
-      id: c.id_curso,
-      nombre: c.nombre,
-      grado: c.grado,
-      sede,
-      materias: (c.materias || []).map((m: any) => ({
-        id: m.id,
-        nombre: m.nombre,
-        docente: m.docente
-      }))
-    }));
+    // Logs de diagnóstico
+    console.log('📦 Cursos desde la API:', cursosRaw);
+    console.log('🏫 ID de sede actual:', sedeId);
+    console.log('🏫 IDs de sedes en los cursos:', cursosRaw.map((c: any) => c.id_sede));
 
-    console.log('✅ Cursos recibidos:', cursos);
-    return { sede, cursos };
-
-  } catch (error: any) {
-    console.warn('⚠️ No se pudieron cargar los cursos, usando datos de ejemplo →', error.message);
-
-    const fakeCursos: CursoConSede[] = [
-      {
-        id: 'c1',
-        nombre: 'Curso Demo A',
-        grado: '10°',
+    // 3. Filtrar los cursos que pertenecen a esta sede
+    const cursos: CursoConSede[] = cursosRaw
+      .filter((c: any) => String(c.id_sede) === String(sedeId))
+      .map((c: any) => ({
+        id: c.id_curso.toString(),
+        nombre: c.nombre,
+        grado: c.grado,
+        anioLectivo: c.anio_lectivo,
         sede,
-        materias: [
-          { id: 'm1', nombre: 'Matemáticas', docente: 'Prof. Demo' },
-          { id: 'm2', nombre: 'Historia', docente: 'Prof. Demo' }
-        ]
-      }
-    ];
+        materias: [] // ← Se integrará desde otra API más adelante
+      }));
 
-    return { sede, cursos: fakeCursos };
+    console.log('✅ Cursos filtrados por sede:', cursos);
+
+    return { sede, cursos };
+  } catch (error: any) {
+    console.error('❌ Error al obtener cursos:', error.message);
+
+    return {
+      sede,
+      cursos: []
+    };
   }
 }

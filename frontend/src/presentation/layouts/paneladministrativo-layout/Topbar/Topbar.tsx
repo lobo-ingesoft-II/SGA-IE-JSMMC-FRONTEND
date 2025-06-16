@@ -73,7 +73,7 @@ const Topbar = ({ handleDrawerToggle }: TopbarProps): ReactElement => {
           flex={"1 1 auto"}
         >
           <Typography variant="h5" component="h5">
-            IED Josué Manrique - Panel de educadores
+            IED Josué Manrique - Portal Administrativo
           </Typography>
         </Stack>
         <Stack direction="row" alignItems="center" gap={{ xs: 1, sm: 1.75 }}>

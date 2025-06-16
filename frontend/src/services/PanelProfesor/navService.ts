@@ -7,6 +7,7 @@ import { MateriaDetalle, getMateriaDetalle } from './asignaturaService';
 export async function fetchNavItems(): Promise<NavItem[]> {
   const userData = localStorage.getItem('user');
   const userId = userData ? JSON.parse(userData).id : null;
+  const profesorId = userData ? JSON.parse(userData).id_profesor || 2 : 2;
 
   const items: NavItem[] = [
     {
@@ -21,7 +22,7 @@ export async function fetchNavItems(): Promise<NavItem[]> {
   try {
     const [sedes, cursos, asignaturas] = await Promise.all([
       fetchSedes(),
-      fetchCursos(),
+      fetchCursosDelProfesor(profesorId),
       fetchAsignaturasParaSidebar()
     ]);
 
@@ -95,17 +96,16 @@ async function fetchSedes(): Promise<Sede[]> {
     if (!res.ok) throw new Error(`Status ${res.status}`);
     const data = await res.json();
 
-    // Adaptar claves si vienen como id_sede → id
     return data.map((sede: any) => ({
       id: sede.id_sede,
       nombre: sede.nombre,
-      direccion: sede.direccion || '' // opcional si existe
+      direccion: sede.direccion || ''
     }));
   } catch (e) {
     console.error('Error cargando sedes reales:', e);
     return [
-      { id: 'sede1', nombre: 'Sede Norte', direccion: 'Calle Principal 123' },
-      { id: 'sede2', nombre: 'Sede Sur', direccion: 'Avenida Siempre Viva 742' }
+      { id: 'sede1', nombre: 'Sede Norte' },
+      { id: 'sede2', nombre: 'Sede Sur' }
     ];
   }
 }
@@ -114,42 +114,25 @@ export interface CursoConSede extends Curso {
   sede: Sede;
 }
 
-async function fetchCursos(): Promise<CursoConSede[]> {
+async function fetchCursosDelProfesor(profesorId: number): Promise<CursoConSede[]> {
   try {
-    const res = await fetch('http://localhost:8000/cursos', {
+    const res = await fetch(`http://localhost:8004/cursos/profesores/${profesorId}/cursos`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
     if (!res.ok) throw new Error(`Status ${res.status}`);
-    return await res.json();
+    const data = await res.json();
+    return data.map((curso: any) => ({
+      id: curso.id_curso.toString(),
+      nombre: curso.nombre,
+      grado: curso.grado,
+      anioLectivo: curso.anio_lectivo,
+      materias: [],
+      sede: { id: curso.id_sede.toString(), nombre: '' } // opcional, se puede completar si se desea
+    }));
   } catch (e) {
-    const fakeSede1: Sede = {
-      id: 's1',
-      nombre: 'Sede Norte',
-      direccion: 'Calle Falsa 123'
-    };
-    return [
-      {
-        id: 'c1',
-        nombre: 'Curso Prueba A',
-        grado: '10°',
-        sede: fakeSede1,
-        materias: [
-          { id: 'm1', nombre: 'Matemáticas', docente: 'Prof. García' },
-          { id: 'm2', nombre: 'Historia', docente: 'Prof. Díaz' },
-          { id: 'm3', nombre: 'Física', docente: 'Prof. López' }
-        ]
-      },
-      {
-        id: 'c2',
-        nombre: 'Curso Prueba B',
-        grado: '11°',
-        sede: fakeSede1,
-        materias: [
-          { id: 'm4', nombre: 'Química', docente: 'Prof. Rodríguez' }
-        ]
-      }
-    ];
+    console.error('Error cargando cursos del profesor:', e);
+    return [];
   }
 }
 

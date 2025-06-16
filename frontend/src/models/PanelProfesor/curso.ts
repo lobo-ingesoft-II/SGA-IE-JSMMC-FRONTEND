@@ -7,4 +7,5 @@ export interface Curso {
   grado: string;
   materias: Materia[];
   sede: Sede;  
+  anioLectivo?: number;
 }

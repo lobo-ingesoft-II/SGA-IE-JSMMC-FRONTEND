@@ -16,7 +16,7 @@ import { useAuth } from "../../../../context/authContext";
 
 const AccountDropdown = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [nombre, setNombre] = useState("Usuario");
+  const [nombreCompleto, setNombreCompleto] = useState("Usuario");
   const open = Boolean(anchorEl);
 
   const { logout, user } = useAuth();
@@ -26,7 +26,11 @@ const AccountDropdown = () => {
     (async () => {
       try {
         const data = await getProfesorInicioData();
-        if (data?.nombre) setNombre(data.nombre);
+        if (data?.nombre && data?.apellidos) {
+          setNombreCompleto(`${data.nombre} ${data.apellidos}`);
+        } else if (data?.nombre) {
+          setNombreCompleto(data.nombre);
+        }
       } catch (err) {
         console.error("Error al cargar el nombre del profesor:", err);
       }
@@ -82,7 +86,7 @@ const AccountDropdown = () => {
           py: 0.625,
         }}
       >
-        <Tooltip title={nombre} placement="top" arrow>
+        <Tooltip title={nombreCompleto} placement="top" arrow>
           <Avatar sx={{ width: 45, height: 45, bgcolor: "primary.main" }}>
             <IconifyIcon icon="mdi:account" width={24} height={24} color="white" />
           </Avatar>
@@ -92,7 +96,7 @@ const AccountDropdown = () => {
           color="text.primary"
           display={{ xs: "none", sm: "block" }}
         >
-          {nombre}
+          {nombreCompleto}
         </Typography>
         <IconifyIcon
           icon="ion:caret-down-outline"

@@ -150,6 +150,7 @@ const VistaSedes = () => {
                   </Typography>
                   <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
                     <Chip label={curso.grado} size="small" color="primary" variant="outlined" />
+                    <Chip label={`Año lectivo: ${curso.anioLectivo || 'N/D'}`} size="small" color="secondary" />
                     <Chip label={`${curso.materias.length} materias`} size="small" />
                   </Stack>
                 </Box>
