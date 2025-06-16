@@ -158,7 +158,7 @@ const VistaCursos = () => {
         color: theme.palette.primary.dark
       }}>
         <SchoolIcon sx={{ fontSize: 36, mr: 2, color: theme.palette.primary.main }} />
-        {curso.nombre}
+        Grado {curso.grado}
       </Typography>
 
       <Paper
