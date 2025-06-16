@@ -2,64 +2,180 @@ import { Curso } from '../../models/PanelProfesor/curso';
 import { Sede } from '../../models/PanelProfesor/sede';
 
 /**
- * Esta interfaz extiende la interfaz base Curso para incluir el objeto completo de la sede.
- * El frontend espera que al consultar los cursos, cada uno venga con su sede ya incluida
- * como objeto anidado (no solo el ID de la sede).
- *
- * Ejemplo de objeto esperado por el frontend:
- * {
- *   id: "c1",
- *   nombre: "Curso A",
- *   grado: "10°",
- *   sede: {
- *     id: "s1",
- *     nombre: "Sede Norte",
- *     direccion: "Calle Falsa 123"
- *   },
- *   materias: [ ... ]
- * }
+ * Extiende la interfaz base Curso para incluir la sede anidada.
  */
 export interface CursoConSede extends Curso {
   sede: Sede;
+  anioLectivo: number;
 }
 
 /**
- * Esta función hace una solicitud HTTP al backend para obtener todos los cursos disponibles.
- * El backend debe exponer un endpoint GET en la ruta `/cursos`, que devuelva un JSON con la forma descrita arriba.
- *
- * La respuesta debe tener el siguiente tipo:
- * Array<CursoConSede>
- * 
- * La estructura de cada curso incluye:
- * - id
- * - nombre
- * - grado
- * - sede: objeto con { id, nombre, direccion }
- * - materias: arreglo de materias opcional o incluido, dependiendo del diseño
- *
- * Si el servidor responde con un código distinto de 200 OK,
- * la función lanza una excepción para que el componente React pueda mostrar un error.
- * 
- * @returns Promesa que resuelve a un arreglo de cursos con sede.
- * @throws Error si la respuesta HTTP no fue exitosa.
+ * Obtiene un curso específico junto con su sede.
  */
-export async function getAllCursos(): Promise<CursoConSede[]> {
-  // Realiza la petición HTTP al backend
-  const response = await fetch('http://localhost:8000/cursos', {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    // Si el backend utiliza sesiones con cookies, descomentar esta línea:
-    // credentials: 'include'
-  });
+export async function getCursoById(idCurso: string | number): Promise<CursoConSede> {
+  // Convertir a número si es string
+  const id = typeof idCurso === 'string' ? parseInt(idCurso, 10) : idCurso;
+  
+  try {
+    // 1. Traer datos del curso
+    const cursoRes = await fetch(`http://127.0.0.1:8004/cursos/${id}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!cursoRes.ok) {
+      throw new Error(`Error al obtener curso ${id} (status ${cursoRes.status})`);
+    }
+    
+    const cursoRaw = await cursoRes.json();
 
-  // Si la respuesta no fue exitosa (por ejemplo, 500 o 404), lanza error
-  if (!response.ok) {
-    throw new Error(`Error al obtener cursos (status ${response.status})`);
+    // 2. Traer nombre de sede
+    let sedeNombre = 'Sede desconocida';
+    try {
+      const sedeRes = await fetch(`http://localhost:8007/sedes/${cursoRaw.id_sede}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (sedeRes.ok) {
+        const sedeRaw = await sedeRes.json();
+        sedeNombre = sedeRaw.nombre;
+      }
+    } catch (e) {
+      console.error(`Error obteniendo sede ${cursoRaw.id_sede}`, e);
+    }
+
+    return {
+      id: cursoRaw.id_curso.toString(),
+      nombre: cursoRaw.nombre,
+      grado: cursoRaw.grado,
+      anioLectivo: cursoRaw.anio_lectivo,
+      sede: { 
+        id: cursoRaw.id_sede.toString(), 
+        nombre: sedeNombre 
+      },
+      materias: []
+    };
+  } catch (error: any) {
+    console.error('Error en getCursoById:', error.message);
+    throw error;
   }
+}
 
-  // Si fue exitosa, convierte la respuesta a JSON y la devuelve tipada
-  const data: CursoConSede[] = await response.json();
-  return data;
+/**
+ * Obtiene todos los cursos de un profesor específico
+ */
+export async function getCursosByProfesor(profesorId: string | number): Promise<CursoConSede[]> {
+  // Convertir a número si es string
+  const id = typeof profesorId === 'string' ? parseInt(profesorId, 10) : profesorId;
+  
+  try {
+    const response = await fetch(`http://127.0.0.1:8004/cursos/profesores/${id}/cursos`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error al obtener cursos del profesor ${id} (status ${response.status})`);
+    }
+
+    const rawList = await response.json();
+    
+    // Obtener detalles de sede en paralelo
+    const cursosConSedes = await Promise.all(
+      rawList.map(async (c: any) => {
+        let sedeNombre = 'Sede desconocida';
+        try {
+          const sedeRes = await fetch(`http://localhost:8007/sedes/${c.id_sede}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          if (sedeRes.ok) {
+            const sedeRaw = await sedeRes.json();
+            sedeNombre = sedeRaw.nombre;
+          }
+        } catch (e) {
+          console.error(`Error obteniendo sede ${c.id_sede}`, e);
+        }
+
+        return {
+          id: c.id_curso.toString(),
+          nombre: c.nombre,
+          grado: c.grado,
+          anioLectivo: c.anio_lectivo,
+          sede: { 
+            id: c.id_sede.toString(), 
+            nombre: sedeNombre 
+          },
+          materias: []
+        };
+      })
+    );
+
+    return cursosConSedes;
+  } catch (error: any) {
+    console.error('Error en getCursosByProfesor:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Obtiene estudiantes de un curso específico
+ */
+export async function getEstudiantesPorCurso(cursoId: string | number): Promise<any[]> {
+  // Convertir a número si es string
+  const id = typeof cursoId === 'string' ? parseInt(cursoId, 10) : cursoId;
+  
+  try {
+    const response = await fetch(`http://127.0.0.1:8005/cursos/${id}/estudiantes`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error al obtener estudiantes (status ${response.status})`);
+    }
+
+    const estudiantes = await response.json();
+    
+    return estudiantes.map((e: any) => ({
+      id: e.id_estudiante.toString(),
+      nombre: `${e.nombres} ${e.apellidos}`,
+      inasistencias: e.inasistencias || 0
+    }));
+  } catch (error: any) {
+    console.error('Error en getEstudiantesPorCurso:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Obtiene materias de un curso específico
+ */
+export async function getMateriasPorCurso(cursoId: string | number): Promise<any[]> {
+  // Convertir a número si es string
+  const id = typeof cursoId === 'string' ? parseInt(cursoId, 10) : cursoId;
+  
+  try {
+    const response = await fetch(`http://127.0.0.1:8006/cursos/${id}/materias`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error al obtener materias (status ${response.status})`);
+    }
+
+    const materias = await response.json();
+    
+    return materias.map((m: any) => ({
+      id: m.id_materia.toString(),
+      nombre: m.nombre_materia,
+      docente: m.docente ? `${m.docente.nombres} ${m.docente.apellidos}` : 'Sin asignar'
+    }));
+  } catch (error: any) {
+    console.error('Error en getMateriasPorCurso:', error.message);
+    throw error;
+  }
 }

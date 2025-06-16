@@ -6,106 +6,116 @@ import {
   Divider,
   Stack,
   Chip,
-  IconButton,
-  Collapse,
   useTheme,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
   School as SchoolIcon,
   Book as BookIcon,
-  Place as PlaceIcon
+  Place as PlaceIcon,
+  People as PeopleIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
-import { Curso } from '../../../../../../models/PanelProfesor/curso';
-import { Sede } from '../../../../../../models/PanelProfesor/sede';
-import { Materia } from '../../../../../../models/PanelProfesor/materia'; 
-import { Estudiante } from '../../../../../../models/PanelProfesor/estudiante'; 
-import { getAllCursos } from '../../../../../../services/PanelProfesor/cursoService';
-import { getEstudiantesPorCurso } from '../../../../../../services/PanelProfesor/estudianteService'; 
-
-interface CursoConSede extends Curso {
-  sede: Sede;
-}
+import { getCursoById } from '../../../../../../services/PanelProfesor/cursoService';
+import type { CursoConSede } from '../../../../../../services/PanelProfesor/cursoService';
 
 const VistaCursos = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-
-  const [cursos, setCursos] = useState<CursoConSede[]>([]);
+  const { cursoId } = useParams<{ cursoId: string }>();
+  
+  const [curso, setCurso] = useState<CursoConSede | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedCurso, setExpandedCurso] = useState<string | null>(null);
-  const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
+  const [estudiantes, setEstudiantes] = useState<any[]>([]);
+  const [materias, setMaterias] = useState<any[]>([]);
   const [loadingEstudiantes, setLoadingEstudiantes] = useState(false);
+  const [loadingMaterias, setLoadingMaterias] = useState(false);
+
+  // Datos fake para estudiantes
+  const fakeEstudiantes = [
+    { id: 'e1', nombre: 'Ana Torres', inasistencias: 3 },
+    { id: 'e2', nombre: 'Luis Pérez', inasistencias: 1 },
+    { id: 'e3', nombre: 'Carlos Sánchez', inasistencias: 0 },
+    { id: 'e4', nombre: 'María Gómez', inasistencias: 2 },
+    { id: 'e5', nombre: 'Juan Rodríguez', inasistencias: 5 },
+    { id: 'e6', nombre: 'Sofía Vargas', inasistencias: 1 }
+  ];
+
+  // Datos fake para materias
+  const fakeMaterias = [
+    { id: 'm1', nombre: 'Matemáticas', docente: 'Prof. García' },
+    { id: 'm2', nombre: 'Historia', docente: 'Prof. Díaz' },
+    { id: 'm3', nombre: 'Ciencias', docente: 'Prof. López' },
+    { id: 'm4', nombre: 'Literatura', docente: 'Prof. Martínez' },
+    { id: 'm5', nombre: 'Educación Física', docente: 'Prof. Ramírez' }
+  ];
 
   useEffect(() => {
-    async function fetchCursos() {
+    async function fetchCurso() {
       setLoading(true);
       setError(null);
 
       try {
-        const cursosData: CursoConSede[] = await getAllCursos();
-        setCursos(cursosData);
-
-        // Expandir el primer curso por defecto (simula selección previa)
-        if (cursosData.length > 0) {
-          const selectedCursoId = cursosData[0].id;
-          setExpandedCurso(selectedCursoId);
-          const estudiantesData = await getEstudiantesPorCurso(selectedCursoId);
-          setEstudiantes(estudiantesData);
+        if (!cursoId) {
+          throw new Error("ID de curso no definido");
         }
+        
+        // Obtener el curso por ID
+        const cursoData = await getCursoById(cursoId);
+        setCurso(cursoData);
+        
+        // Simular carga de estudiantes y materias
+        setLoadingEstudiantes(true);
+        setLoadingMaterias(true);
+        
+        setTimeout(() => {
+          setEstudiantes(fakeEstudiantes);
+          setLoadingEstudiantes(false);
+        }, 800);
+        
+        setTimeout(() => {
+          setMaterias(fakeMaterias);
+          setLoadingMaterias(false);
+        }, 1000);
+        
       } catch (err: any) {
-        console.warn('Falló getAllCursos(); usando datos de prueba →', err.message);
-
-        const fakeSede1: Sede = {
-          id: 's1',
-          nombre: 'Sede Norte',
-        };
-
-        const fakeCursos: CursoConSede[] = [
-          {
-            id: 'c1',
-            nombre: 'Curso Prueba A',
-            grado: '10°',
-            sede: fakeSede1,
-            materias: [
-              { id: 'm1', nombre: 'Matemáticas', docente: 'Prof. García' },
-              { id: 'm2', nombre: 'Historia', docente: 'Prof. Díaz' }
-            ]
-          }
-        ];
-
-        setCursos(fakeCursos);
-        setExpandedCurso(fakeCursos[0].id);
-        setEstudiantes([
-          { id: 'e1', nombre: 'Ana Torres', inasistencias: 3 },
-          { id: 'e2', nombre: 'Luis Pérez', inasistencias: 1 }
-        ]);
+        setError(`Error al cargar el curso: ${err.message}`);
+        console.error('Error fetching curso:', err);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchCursos();
-  }, []);
+    fetchCurso();
+  }, [cursoId]);
 
   const handleClickMateria = (materiaId: string) => {
-    navigate(`/PanelProfesor/Asignatura/${materiaId}`);
+    // Obtener datos del usuario del localStorage
+    const userData = localStorage.getItem('user');
+    const userId = userData ? JSON.parse(userData).id : null;
+    
+    if (userId) {
+      navigate(`/PanelProfesor/${userId}/Asignatura/${materiaId}`);
+    } else {
+      console.error('Usuario no autenticado');
+      // Puedes redirigir a login o mostrar un mensaje
+    }
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Typography variant="h6">Cargando cursos...</Typography>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh" flexDirection="column">
+        <CircularProgress size={60} thickness={4} sx={{ mb: 3 }} />
+        <Typography variant="h6" color="textSecondary">Cargando curso...</Typography>
       </Box>
     );
   }
@@ -113,159 +123,264 @@ const VistaCursos = () => {
   if (error) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Typography variant="h6" color="error">{error}</Typography>
+        <Alert severity="error" sx={{ maxWidth: '80%' }}>
+          <Typography variant="h6" gutterBottom>Error al cargar el curso</Typography>
+          <Typography>{error}</Typography>
+          <Typography variant="body2" mt={2}>
+            Por favor, intenta recargar la página o contacta al soporte técnico.
+          </Typography>
+        </Alert>
       </Box>
     );
   }
 
-  if (cursos.length === 0) {
+  if (!curso) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Typography variant="h6" color="text.secondary">No hay cursos disponibles.</Typography>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh" flexDirection="column">
+        <SchoolIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+        <Typography variant="h5" color="text.secondary" gutterBottom>
+          Curso no encontrado
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          El curso solicitado no existe o no está disponible.
+        </Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 2 }}>
-        <SchoolIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-        Información del curso
+    <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto' }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ 
+        mb: 3, 
+        display: 'flex', 
+        alignItems: 'center',
+        fontWeight: 600,
+        color: theme.palette.primary.dark
+      }}>
+        <SchoolIcon sx={{ fontSize: 36, mr: 2, color: theme.palette.primary.main }} />
+        {curso.nombre}
       </Typography>
 
-      <Box sx={{ mb: 4 }}>
-        {cursos
-          .filter(curso => curso.id === expandedCurso)
-          .map(curso => (
-            <Paper
-              key={curso.id}
-              elevation={2}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: 3,
+          overflow: 'hidden',
+          border: `1px solid ${theme.palette.divider}`,
+          backgroundColor: theme.palette.background.default,
+          mb: 4
+        }}
+      >
+        <Box
+          sx={{
+            p: 3,
+            backgroundColor: theme.palette.primary.light,
+            background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
+            color: theme.palette.primary.contrastText
+          }}
+        >
+          <Typography variant="h5" component="h2" sx={{ fontWeight: 700, mb: 1 }}>
+            {curso.nombre}
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+            <Chip
+              label={curso.sede.nombre}
+              size="medium"
+              icon={<PlaceIcon fontSize="small" />}
+              sx={{ 
+                backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+                color: 'white',
+                fontWeight: 500 
+              }}
+            />
+            <Chip
+              label={curso.grado}
+              size="medium"
+              sx={{ 
+                backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+                color: 'white',
+                fontWeight: 500 
+              }}
+            />
+            <Chip
+              label={`Año lectivo: ${curso.anioLectivo}`}
+              size="medium"
+              sx={{ 
+                backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+                color: 'white',
+                fontWeight: 500 
+              }}
+            />
+          </Stack>
+        </Box>
+
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom sx={{ 
+            mb: 2, 
+            display: 'flex', 
+            alignItems: 'center',
+            fontWeight: 600,
+            color: theme.palette.primary.main
+          }}>
+            <BookIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+            Materias del curso
+          </Typography>
+
+          {loadingMaterias ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : materias.length === 0 ? (
+            <Box sx={{ 
+              p: 3, 
+              backgroundColor: theme.palette.grey[100], 
+              borderRadius: 2,
+              textAlign: 'center'
+            }}>
+              <Typography variant="body1" color="text.secondary">
+                No hay materias asignadas a este curso.
+              </Typography>
+            </Box>
+          ) : (
+            <Box
               sx={{
-                mb: 2,
-                borderRadius: 3,
-                overflow: 'hidden',
-                borderLeft: `4px solid ${theme.palette.primary.main}`
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2, 1fr)',
+                  md: 'repeat(3, 1fr)',
+                  lg: 'repeat(4, 1fr)'
+                },
+                gap: 3
               }}
             >
-              <Box
-                sx={{
-                  p: 2,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  backgroundColor: theme.palette.action.selected
-                }}
-              >
-                <Box>
-                  <Typography variant="h6" component="h3">{curso.nombre}</Typography>
-                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                    <Chip
-                      label={curso.sede.nombre}
-                      size="small"
-                      icon={<PlaceIcon fontSize="small" />}
-                    />
-                    <Chip
-                      label={curso.grado}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                    <Chip
-                      label={`${curso.materias.length} materias`}
-                      size="small"
-                    />
-                  </Stack>
-                </Box>
-              </Box>
-
-              <Divider />
-              <Box sx={{ p: 2 }}>
-                <Typography
-                  variant="subtitle1"
-                  gutterBottom
-                  sx={{ display: 'flex', alignItems: 'center' }}
-                >
-                  <BookIcon sx={{ mr: 1, fontSize: '1rem' }} />
-                  Materias del curso ({curso.materias.length})
-                </Typography>
-
-                <Box
+              {materias.map((materia: any) => (
+                <Paper
+                  key={materia.id}
+                  elevation={2}
+                  onClick={() => handleClickMateria(materia.id)}
                   sx={{
-                    display: 'grid',
-                    gridTemplateColumns: {
-                      xs: '1fr',
-                      sm: 'repeat(2, 1fr)',
-                      md: 'repeat(3, 1fr)'
-                    },
-                    gap: 2
+                    p: 2.5,
+                    borderRadius: 2,
+                    cursor: 'pointer',
+                    borderTop: `4px solid ${theme.palette.secondary.main}`,
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-5px)',
+                      boxShadow: theme.shadows[6],
+                      backgroundColor: theme.palette.primary.light,
+                      borderColor: theme.palette.primary.dark,
+                      '& .materia-title': {
+                        color: theme.palette.primary.contrastText
+                      },
+                      '& .materia-docente': {
+                        color: theme.palette.primary.contrastText
+                      }
+                    }
                   }}
                 >
-                  {curso.materias.map(materia => (
-                    <Paper
-                      key={materia.id}
-                      elevation={1}
-                      onClick={() => handleClickMateria(materia.id)}
-                      sx={{
-                        p: 2,
-                        borderRadius: 2,
-                        cursor: 'pointer',
-                        borderLeft: `3px solid ${theme.palette.secondary.main}`,
-                        '&:hover': {
-                          boxShadow: theme.shadows[3]
-                        }
+                  <Typography 
+                    variant="subtitle1" 
+                    className="materia-title"
+                    gutterBottom 
+                    sx={{ 
+                      fontWeight: 600,
+                      color: theme.palette.text.primary
+                    }}
+                  >
+                    {materia.nombre}
+                  </Typography>
+                  {materia.docente && (
+                    <Typography 
+                      variant="body2" 
+                      className="materia-docente"
+                      sx={{ 
+                        color: theme.palette.text.secondary,
+                        fontStyle: 'italic'
                       }}
                     >
-                      <Typography variant="subtitle2" gutterBottom>
-                        {materia.nombre}
-                      </Typography>
-                      {materia.docente && (
-                        <Typography variant="caption" display="block">
-                          Docente: {materia.docente}
+                      Docente: {materia.docente}
+                    </Typography>
+                  )}
+                </Paper>
+              ))}
+            </Box>
+          )}
+        </Box>
+
+        <Divider sx={{ my: 1 }} />
+
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom sx={{ 
+            mb: 2, 
+            display: 'flex', 
+            alignItems: 'center',
+            fontWeight: 600,
+            color: theme.palette.primary.main
+          }}>
+            <PeopleIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+            Estudiantes del curso
+          </Typography>
+
+          {loadingEstudiantes ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : estudiantes.length === 0 ? (
+            <Box sx={{ 
+              p: 3, 
+              backgroundColor: theme.palette.grey[100], 
+              borderRadius: 2,
+              textAlign: 'center'
+            }}>
+              <Typography variant="body1" color="text.secondary">
+                No hay estudiantes asignados a este curso.
+              </Typography>
+            </Box>
+          ) : (
+            <TableContainer 
+              component={Paper} 
+              variant="outlined"
+              sx={{ borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}
+            >
+              <Table>
+                <TableHead sx={{ backgroundColor: theme.palette.grey[100] }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 700, color: theme.palette.text.primary }}>#</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: theme.palette.text.primary }}>Nombre del estudiante</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: theme.palette.text.primary }}>Inasistencias</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {estudiantes.map((estudiante: any, index: number) => (
+                    <TableRow key={estudiante.id} hover>
+                      <TableCell sx={{ color: theme.palette.text.secondary }}>{index + 1}</TableCell>
+                      <TableCell>
+                        <Typography variant="body1">{estudiante.nombre}</Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          ID: {estudiante.id}
                         </Typography>
-                      )}
-                    </Paper>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Chip 
+                          label={estudiante.inasistencias} 
+                          size="small" 
+                          variant="outlined"
+                          color={estudiante.inasistencias > 5 ? 'error' : 'primary'}
+                          sx={{ 
+                            minWidth: 40,
+                            fontWeight: estudiante.inasistencias > 5 ? 700 : 500 
+                          }}
+                        />
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </Box>
-              </Box>
-
-              <Divider sx={{ mt: 3 }} />
-              <Box sx={{ p: 2 }}>
-                <Typography
-                  variant="subtitle1"
-                  gutterBottom
-                  sx={{ display: 'flex', alignItems: 'center' }}
-                >
-                  Estudiantes del curso
-                </Typography>
-
-                {loadingEstudiantes ? (
-                  <Typography variant="body2">Cargando estudiantes...</Typography>
-                ) : estudiantes.length === 0 ? (
-                  <Typography variant="body2">No hay estudiantes asignados.</Typography>
-                ) : (
-                  <TableContainer component={Paper} variant="outlined">
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell><strong>Nombre</strong></TableCell>
-                          <TableCell><strong>Inasistencias</strong></TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {estudiantes.map(est => (
-                          <TableRow key={est.id}>
-                            <TableCell>{est.nombre}</TableCell>
-                            <TableCell>{est.inasistencias}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-              </Box>
-            </Paper>
-        ))}
-      </Box>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Box>
+      </Paper>
     </Box>
   );
 };

@@ -34,11 +34,10 @@ const Error404 = (): ReactElement => {
           py={12}
         >
           <Typography variant="h2" sx={{ mb: 3 }}>
-            Sorry, page not found!
+            ¡Perdón, página no encontrada!
           </Typography>
           <Typography variant="subtitle1" sx={{ color: 'text.secondary' }}>
-            Sorry, we couldn’t find the page you’re looking for. Perhaps you’ve mistyped the URL? Be
-            sure to check your spelling.
+            Perdón, no pudimos encontrar la página que estás buscando. Quizás la URL es incorrecta o la página ha sido movida.
           </Typography>
           <Image
             src={error404}
@@ -50,7 +49,7 @@ const Error404 = (): ReactElement => {
             }}
           />
           <Button component={Nav} to="/" size="large" variant="contained">
-            Back to Home
+            Volver al inicio
           </Button>
         </Stack>
       </Container>
