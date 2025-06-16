@@ -1,56 +1,94 @@
 import { Sede } from '../../models/PanelProfesor/sede';
 import { Curso } from '../../models/PanelProfesor/curso';
 
-/**
- * Extiende la interfaz Curso para incluir la sede asociada.
- * El backend debe devolver cada curso con su objeto 'sede' correspondiente.
- */
 export interface CursoConSede extends Curso {
   sede: Sede;
 }
 
-/**
- * Llama al backend para obtener:
- *   1) La información de la Sede (GET /sedes/{sedeId})
- *   2) Los cursos de esa Sede (GET /sedes/{sedeId}/cursos)
- *
- * Si alguna de las dos peticiones falla (por ejemplo,
- * el servidor no está corriendo → “Failed to fetch”),
- * este método arrojará un Error y corresponderá al componente
- * capturar ese error para usar datos de prueba.
- *
- * @param sedeId   ID de la sede a consultar.
- * @returns        Un objeto con { sede, cursos }.
- * @throws         Error si alguna petición no devuelve status 200.
- */
 export async function getSedeAndCursos(
   sedeId: string
 ): Promise<{ sede: Sede; cursos: CursoConSede[] }> {
-  // 1) Obtener la Sede
-  const respSede = await fetch(`http://localhost:8000/sedes/${sedeId}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    // credentials: 'include'  // Descomenta si usas cookies de sesión
-  });
-  if (!respSede.ok) {
-    throw new Error(`No se pudo cargar la sede (status ${respSede.status})`);
-  }
-  const sede: Sede = await respSede.json();
+  let sede: Sede;
 
-  // 2) Obtener los cursos de esa Sede
-  const respCursos = await fetch(`http://localhost:8000/sedes/${sedeId}/cursos`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    // credentials: 'include'
-  });
-  if (!respCursos.ok) {
-    throw new Error(`No se pudo cargar los cursos (status ${respCursos.status})`);
-  }
-  const cursos: CursoConSede[] = await respCursos.json();
+  // Intentar cargar la sede
+  try {
+    const sedeRes = await fetch(`http://localhost:8007/sedes/${sedeId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
 
-  return { sede, cursos };
+    if (!sedeRes.ok) {
+      throw new Error(`No se pudo obtener la sede. Status ${sedeRes.status}`);
+    }
+
+    const sedeRaw = await sedeRes.json();
+
+    sede = {
+      id: sedeRaw.id_sede,
+      nombre: sedeRaw.nombre,
+    };
+
+    console.log(`✅ URL llamada: http://localhost:8007/sedes/${sedeId}`);
+    console.log('✅ Sede recibida:', sede);
+  } catch (error: any) {
+    console.error('❌ Error al obtener la sede →', error.message);
+    return {
+      sede: {
+        id: sedeId,
+        nombre: 'Nombre no disponible',
+      },
+      cursos: []
+    };
+  }
+
+  // Intentar cargar los cursos
+  try {
+    const cursosRes = await fetch(`http://localhost:8007/sedes/${sedeId}/cursos`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!cursosRes.ok) {
+      throw new Error(`No se pudo obtener los cursos. Status ${cursosRes.status}`);
+    }
+
+    const cursosRaw = await cursosRes.json();
+
+    const cursos: CursoConSede[] = cursosRaw.map((c: any) => ({
+      id: c.id_curso,
+      nombre: c.nombre,
+      grado: c.grado,
+      sede,
+      materias: (c.materias || []).map((m: any) => ({
+        id: m.id,
+        nombre: m.nombre,
+        docente: m.docente
+      }))
+    }));
+
+    console.log('✅ Cursos recibidos:', cursos);
+    return { sede, cursos };
+
+  } catch (error: any) {
+    console.warn('⚠️ No se pudieron cargar los cursos, usando datos de ejemplo →', error.message);
+
+    const fakeCursos: CursoConSede[] = [
+      {
+        id: 'c1',
+        nombre: 'Curso Demo A',
+        grado: '10°',
+        sede,
+        materias: [
+          { id: 'm1', nombre: 'Matemáticas', docente: 'Prof. Demo' },
+          { id: 'm2', nombre: 'Historia', docente: 'Prof. Demo' }
+        ]
+      }
+    ];
+
+    return { sede, cursos: fakeCursos };
+  }
 }

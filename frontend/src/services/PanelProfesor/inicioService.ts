@@ -8,37 +8,56 @@ export interface ProfesorInicioData {
   materiasAsignadas: { id: string; nombre: string; cursoNombre: string }[];
 }
 
-/**
- * Simula la obtención de la información básica del profesor para la página de inicio.
- * En una aplicación real, esto haría una llamada API al backend
- * para obtener los datos del profesor logueado.
- *
- * @returns {Promise<ProfesorInicioData>} Una promesa que resuelve con los datos del profesor.
- */
 export async function getProfesorInicioData(): Promise<ProfesorInicioData> {
-  // Simular un retraso de red
-  await new Promise(resolve => setTimeout(resolve, 800));
+  const token = localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-  // Datos de prueba para el profesor
-  const fakeProfesorData: ProfesorInicioData = {
-    id: 'profesor123',
-    nombre: 'Juan Pérez García',
-    correo: 'juan.perez@iedjosuemanrique.edu.co',
-    rol: 'Profesor',
-    sedesAsignadas: [
-      { id: 'sede1', nombre: 'Sede Norte' },
-      { id: 'sede2', nombre: 'Sede Sur' }
-    ],
-    cursosAsignados: [
-      { id: 'c1', nombre: 'Curso Prueba A', grado: '10°' },
-      { id: 'c2', nombre: 'Curso Prueba B', grado: '11°' }
-    ],
-    materiasAsignadas: [
-      { id: 'm1', nombre: 'Matemáticas', cursoNombre: 'Curso Prueba A' },
-      { id: 'm2', nombre: 'Historia', cursoNombre: 'Curso Prueba A' },
-      { id: 'm4', nombre: 'Química', cursoNombre: 'Curso Prueba B' }
-    ]
+  if (!token || !user.id) {
+    throw new Error('No hay sesión activa');
+  }
+
+  // 1. Consultar sedes asignadas
+  const sedesResponse = await fetch('http://localhost:8007/sedes/', {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }
+  });
+
+  if (!sedesResponse.ok) {
+    throw new Error('No se pudieron obtener las sedes');
+  }
+
+  const sedesData: { id_sede: number; nombre: string }[] = await sedesResponse.json();
+
+  const sedesAsignadas = sedesData.map((sede) => ({
+    id: sede.id_sede.toString(),
+    nombre: sede.nombre
+  }));
+
+  // 2. Datos fake para cursos y materias
+  const cursosAsignados = [
+    { id: 'c1', nombre: 'Curso Prueba A', grado: '10°' },
+    { id: 'c2', nombre: 'Curso Prueba B', grado: '11°' }
+  ];
+
+  const materiasAsignadas = [
+    { id: 'm1', nombre: 'Matemáticas', cursoNombre: 'Curso Prueba A' },
+    { id: 'm2', nombre: 'Historia', cursoNombre: 'Curso Prueba A' },
+    { id: 'm4', nombre: 'Química', cursoNombre: 'Curso Prueba B' }
+  ];
+
+  // 3. Retornar respuesta final
+  const profesorData: ProfesorInicioData = {
+    id: user.id.toString(),
+    nombre: user.name || 'Profesor',
+    correo: user.email || '',
+    rol: user.rol || 'profesor',
+    sedesAsignadas,
+    cursosAsignados,
+    materiasAsignadas
   };
 
-  return fakeProfesorData;
+  return profesorData;
 }

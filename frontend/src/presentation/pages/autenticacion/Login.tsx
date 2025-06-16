@@ -80,12 +80,17 @@ const Login = (): ReactElement => {
     const { access_token, rol, id, correo } = data;
 
     const userData = {
-      id,         // ✅ <-- asegúrate de incluir el ID recibido del backend
-      name: correo,
+      id,
+      name: 'Nombre no disponible', // Puedes actualizar si tu backend devuelve el nombre
+      email: correo,
       role: rol,
     };
 
-    login(access_token, userData);
+    // Guardar en localStorage
+    localStorage.setItem('token', access_token);
+    localStorage.setItem('user', JSON.stringify(userData));
+
+login(access_token, userData);
     setLoginSuccess(true);
 
     // Redirigir según rol e ID

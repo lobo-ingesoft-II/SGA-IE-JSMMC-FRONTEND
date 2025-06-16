@@ -27,7 +27,7 @@ export async function fetchNavItems(): Promise<NavItem[]> {
 
     const sedesSub: NavItem[] = sedes.map((s) => ({
       title: s.nombre,
-      path: `Sedes/${s.id}`, 
+      path: `Sedes/${s.id}`,
       active: true,
       collapsible: false
     }));
@@ -41,7 +41,7 @@ export async function fetchNavItems(): Promise<NavItem[]> {
 
     const asignSub: NavItem[] = asignaturas.map((a) => ({
       title: a.nombre,
-      path: `Asignatura/${a.id}`, 
+      path: `Asignatura/${a.id}`,
       active: true,
       collapsible: false
     }));
@@ -74,7 +74,6 @@ export async function fetchNavItems(): Promise<NavItem[]> {
     );
 
     return items;
-
   } catch (e) {
     console.warn('fetchNavItems falló, usando menú de prueba →', (e as Error).message);
     return items;
@@ -83,13 +82,27 @@ export async function fetchNavItems(): Promise<NavItem[]> {
 
 async function fetchSedes(): Promise<Sede[]> {
   try {
-    const res = await fetch('http://localhost:8000/sedes', {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch('http://localhost:8007/sedes/', {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
     });
+
     if (!res.ok) throw new Error(`Status ${res.status}`);
-    return await res.json();
+    const data = await res.json();
+
+    // Adaptar claves si vienen como id_sede → id
+    return data.map((sede: any) => ({
+      id: sede.id_sede,
+      nombre: sede.nombre,
+      direccion: sede.direccion || '' // opcional si existe
+    }));
   } catch (e) {
+    console.error('Error cargando sedes reales:', e);
     return [
       { id: 'sede1', nombre: 'Sede Norte', direccion: 'Calle Principal 123' },
       { id: 'sede2', nombre: 'Sede Sur', direccion: 'Avenida Siempre Viva 742' }
