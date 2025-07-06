@@ -291,7 +291,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 2 }}>
         <BookIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-        Asignatura: {materiaDetalle.nombre} ({materiaDetalle.nombreCurso})
+        Asignatura: {materiaDetalle.nombre}
       </Typography>
 
       <Paper elevation={2} sx={{
@@ -314,6 +314,22 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
                 Docente: <strong>{materiaDetalle.docente}</strong>
               </Typography>
             </Box>
+            {materiaDetalle.sede && (
+              <Box sx={{ flexBasis: { xs: '100%', sm: '50%' }, maxWidth: { xs: '100%', sm: '50%' }, p: 1 }}>
+                <Typography variant="subtitle1">
+                  <PlaceIcon fontSize="small" sx={{ mr: 0.5 }} />
+                  Sede: <strong>{materiaDetalle.sede.nombre}</strong>
+                </Typography>
+              </Box>
+            )}
+            {materiaDetalle.gradoCurso && (
+              <Box sx={{ flexBasis: { xs: '100%', sm: '50%' }, maxWidth: { xs: '100%', sm: '50%' }, p: 1 }}>
+                <Typography variant="subtitle1">
+                  <SchoolIcon fontSize="small" sx={{ mr: 0.5 }} />
+                  Grado: <strong>{materiaDetalle.gradoCurso}</strong>
+                </Typography>
+              </Box>
+            )}
           </Grid>
         </Box>
       </Paper>

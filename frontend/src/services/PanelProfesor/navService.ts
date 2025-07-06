@@ -34,7 +34,7 @@ export async function fetchNavItems(): Promise<NavItem[]> {
     }));
 
     const cursosSub: NavItem[] = cursos.map((c) => ({
-      title: c.nombre,
+      title: `${c.grado} (${c.nombre})`,
       path: `Cursos/${c.id}`,
       active: true,
       collapsible: false

@@ -8,17 +8,82 @@ const API_CURSOS       = 'http://localhost:8004';
 const API_SEDES        = 'http://localhost:8000';
 const API_ASIGNACIONES = 'http://localhost:8001';
 
+// Interface para la respuesta de asignaciones con información completa
+interface AsignacionResponse {
+  id_asignacion: number;
+  id_curso: number;
+  id_asignatura: number;
+  id_profesor: number;
+  nombre?: string;
+  nombre_asignatura?: string;
+}
+
 /**
  * Obtiene las materias asignadas a un curso por un profesor.
+ * Ahora usa los IDs de asignación reales para navegación correcta
  */
 async function getMateriasByCursoAndProfesor(
   cursoId: number,
-  profesorId: number
+  profesorId: number,
+  nombreProfesor: string = 'Sin asignar'
 ): Promise<Materia[]> {
   try {
     console.log(`🔍 Obteniendo materias para curso ${cursoId} y profesor ${profesorId}`);
     
-    // Usar únicamente el endpoint especificado
+    // Primero intentamos obtener las asignaciones con IDs completos
+    let asignacionesConIds: AsignacionResponse[] = [];
+    
+    try {
+      const asignacionesResponse = await fetch(`${API_ASIGNACIONES}/asignacion_asignaturas/por_profesor/${profesorId}`);
+      if (asignacionesResponse.ok) {
+        const todasAsignaciones = await asignacionesResponse.json();
+        // Filtrar por curso específico
+        asignacionesConIds = todasAsignaciones.filter((a: AsignacionResponse) => a.id_curso === cursoId);
+        console.log('📋 Asignaciones con IDs encontradas:', asignacionesConIds);
+      }
+    } catch (error) {
+      console.warn('⚠️ No se pudieron obtener asignaciones con IDs, usando método alternativo');
+    }
+    
+    // Si tenemos asignaciones con IDs, usarlas
+    if (asignacionesConIds.length > 0) {
+      const materiasConIds: Materia[] = [];
+      
+      for (const asignacion of asignacionesConIds) {
+        // Obtener el nombre de la asignatura
+        let nombreAsignatura = asignacion.nombre || asignacion.nombre_asignatura;
+        
+        if (!nombreAsignatura) {
+          try {
+            const nombreResponse = await fetch(
+              `${API_ASIGNACIONES}/asignacion_asignaturas/asignatura/por_profesor_y_curso?id_profesor=${profesorId}&id_curso=${cursoId}`
+            );
+            if (nombreResponse.ok) {
+              const nombreData = await nombreResponse.json();
+              if (Array.isArray(nombreData)) {
+                const matchingAsignatura = nombreData.find((_, index) => index === materiasConIds.length);
+                nombreAsignatura = matchingAsignatura?.nombre || `Asignatura ${asignacion.id_asignatura}`;
+              } else {
+                nombreAsignatura = nombreData.nombre || `Asignatura ${asignacion.id_asignatura}`;
+              }
+            }
+          } catch (error) {
+            nombreAsignatura = `Asignatura ${asignacion.id_asignatura}`;
+          }
+        }
+        
+        materiasConIds.push({
+          id: asignacion.id_asignacion.toString(), // Usar el ID de asignación real
+          nombre: nombreAsignatura || `Asignatura ${asignacion.id_asignatura}`, // Fallback si es undefined
+          docente: nombreProfesor
+        });
+      }
+      
+      console.log('✅ Materias con IDs correctos:', materiasConIds);
+      return materiasConIds;
+    }
+    
+    // Fallback: método original si no se pueden obtener las asignaciones con IDs
     const response = await fetch(
       `${API_ASIGNACIONES}/asignacion_asignaturas/asignatura/por_profesor_y_curso?id_profesor=${profesorId}&id_curso=${cursoId}`
     );
@@ -29,25 +94,23 @@ async function getMateriasByCursoAndProfesor(
     }
     
     const responseData = await response.json();
-    console.log('📦 Respuesta de la API:', responseData);
+    console.log('📦 Respuesta de la API (fallback):', responseData);
     
     // Verificar si la respuesta es un array o un objeto único
     if (Array.isArray(responseData)) {
-      console.log('📋 Procesando múltiples asignaturas:', responseData.length);
-      // Si es un array de asignaturas
+      console.log('📋 Procesando múltiples asignaturas (fallback):', responseData.length);
       return responseData.map((asignaturaData: { nombre: string }, index: number) => ({
-        id: (index + 1).toString(), // Generar IDs secuenciales
+        id: `fallback_${cursoId}_${index + 1}`, // ID temporal que incluye el curso
         nombre: asignaturaData.nombre,
-        docente: 'Sin asignar'
+        docente: nombreProfesor
       }));
     } else {
-      console.log('📄 Procesando una sola asignatura:', responseData.nombre);
-      // Si es un objeto único con una asignatura
+      console.log('📄 Procesando una sola asignatura (fallback):', responseData.nombre);
       const asignaturaData: { nombre: string } = responseData;
       return [{
-        id: '1',
+        id: `fallback_${cursoId}_1`, // ID temporal que incluye el curso
         nombre: asignaturaData.nombre,
-        docente: 'Sin asignar'
+        docente: nombreProfesor
       }];
     }
   } catch (error) {
@@ -83,8 +146,15 @@ export async function getCursoById(
   // 3) Materias asignadas
   const userStr = localStorage.getItem('user');
   if (!userStr) throw new Error('Usuario no autenticado');
-  const { id_profesor } = JSON.parse(userStr);
-  const materias = await getMateriasByCursoAndProfesor(id, id_profesor);
+  const userData = JSON.parse(userStr);
+  const { id_profesor, nombres, apellidos } = userData;
+  
+  // Construir el nombre completo del profesor
+  const nombreCompletoProfesor = nombres && apellidos 
+    ? `${nombres} ${apellidos}`
+    : 'Sin asignar';
+  
+  const materias = await getMateriasByCursoAndProfesor(id, id_profesor, nombreCompletoProfesor);
 
   // 4) Montar curso
   return {

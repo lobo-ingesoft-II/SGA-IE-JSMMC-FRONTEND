@@ -20,11 +20,13 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSedeAndCursos, CursoConSede } from '../../../../../../services/PanelProfesor/sedeService';
 import { Sede } from '../../../../../../models/PanelProfesor/sede';
+import { useAuth } from '../../../../../../context/authContext';
 
 const VistaSedes = () => {
   const { sedeId } = useParams<{ sedeId: string }>();
   const theme = useTheme();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [sede, setSede] = useState<Sede | null>(null);
   const [cursos, setCursos] = useState<CursoConSede[]>([]);
@@ -57,7 +59,7 @@ const VistaSedes = () => {
   };
 
   const handleClickMateria = (materiaId: string) => {
-    navigate(`/Asignatura/${materiaId}`);
+    navigate(`/PanelProfesor/${user?.id}/Asignatura/${materiaId}`);
   };
 
   if (loading) {

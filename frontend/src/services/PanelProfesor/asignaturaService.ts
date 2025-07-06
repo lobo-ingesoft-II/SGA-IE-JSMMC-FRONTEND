@@ -11,17 +11,34 @@ export interface AsignaturaNombreResponse {
   nombre: string;
 }
 
+// Interface para obtener asignaciones completas con información de curso
+export interface AsignacionCompleta {
+  id_asignacion: number;
+  id_curso: number;
+  id_asignatura: number;
+  id_profesor: number;
+  nombre?: string; // API might return 'nombre'
+  nombre_asignatura?: string; // API might return 'nombre_asignatura'
+  nombre_curso?: string;
+  grado_curso?: string;
+}
+
 /**
- * Define una interfaz para los datos de una materia específica, que podría incluir detalles
- * adicionales como el curso al que pertenece y los estudiantes matriculados en ella.
- * Esto es para simular la respuesta del backend para una materia.
+ * Define una interfaz para los datos de una materia específica, que incluye detalles
+ * adicionales como el curso al que pertenece, los estudiantes matriculados, y otra
+ * información relevante obtenida de las APIs del backend.
  */
 export interface MateriaDetalle extends Materia {
   idCurso: string; 
   nombreCurso: string; 
   idProfesorAsignado: string; 
   nombreProfesorAsignado: string; 
-  estudiantes: EstudianteAsignatura[]; 
+  estudiantes: EstudianteAsignatura[];
+  // Campos adicionales que podrían obtenerse de las APIs
+  gradoCurso?: string; // Grado del curso (ej: "11°", "9°")
+  fechaAsignacion?: string; // Fecha en que se asignó la materia al profesor
+  estado?: 'activa' | 'inactiva' | 'finalizada'; // Estado de la asignación
+  sede?: { id: string; nombre: string }; // Sede donde se dicta la materia
 }
 
 /**
@@ -48,8 +65,8 @@ function getAuthToken(): string | null {
 }
 
 /**
- * Función para obtener las asignaturas del profesor logueado
- * Consulta la API de asignaciones para obtener las materias asignadas al profesor
+ * Función para obtener las asignaturas del profesor logueado con información completa de curso
+ * Consulta la API de asignaciones para obtener las materias asignadas al profesor con sus cursos específicos
  */
 export async function getAsignaturasDelProfesor(): Promise<Materia[]> {
   const profesorId = getProfesorLogueadoId();
@@ -67,29 +84,118 @@ export async function getAsignaturasDelProfesor(): Promise<Materia[]> {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // Obtener asignaturas del profesor usando el nuevo endpoint
-    const asignaturasResponse = await fetch(`${API_BASE_URL}/asignacion_asignaturas/nombres_asignaturas/por_profesor/${profesorId}`, {
+    // Obtener información del profesor actual para usar su nombre real
+    const profesorActual = await getProfesorActual();
+
+    // Usar el endpoint que sabemos que funciona para obtener los nombres de las asignaturas
+    const nombresResponse = await fetch(`${API_BASE_URL}/asignacion_asignaturas/nombres_asignaturas/por_profesor/${profesorId}`, {
       method: 'GET',
       headers
     });
 
-    if (!asignaturasResponse.ok) {
-      throw new Error(`Error al obtener asignaturas del profesor: ${asignaturasResponse.status}`);
+    if (!nombresResponse.ok) {
+      throw new Error(`Error al obtener nombres de asignaturas: ${nombresResponse.status}`);
     }
 
-    const asignaturasData: AsignaturaNombreResponse[] = await asignaturasResponse.json();
-    
-    // Mapear la respuesta al formato esperado
-    const asignaturas: Materia[] = asignaturasData.map((asignatura, index) => ({
-      id: (index + 1).toString(), // Generar ID secuencial ya que la API solo devuelve nombres
-      nombre: asignatura.nombre,
-      docente: 'Profesor Actual' // Se podría obtener del contexto de usuario
-    }));
+    const nombresData: AsignaturaNombreResponse[] = await nombresResponse.json();
+    console.log('🔍 Nombres de asignaturas obtenidos:', nombresData);
 
-    return asignaturas;
+    // Obtener información de asignaciones para obtener IDs y cursos
+    let asignacionesData: AsignacionCompleta[] = [];
+    try {
+      const asignacionesResponse = await fetch(`http://localhost:8001/asignacion_asignaturas/por_profesor/${profesorId}`, {
+        method: 'GET',
+        headers
+      });
+
+      if (asignacionesResponse.ok) {
+        asignacionesData = await asignacionesResponse.json();
+        console.log('🔍 Estructura de respuesta de asignaciones:', asignacionesData);
+      }
+    } catch (error) {
+      console.warn('No se pudo obtener información de asignaciones:', error);
+    }
+
+    // Crear las asignaturas con nombres reales
+    const asignaturasConCurso: Materia[] = [];
+    
+    for (let i = 0; i < nombresData.length; i++) {
+      const nombreAsignatura = nombresData[i].nombre; // Usar el nombre del endpoint que funciona
+      const asignacion = asignacionesData[i]; // Intentar hacer matching por índice
+      
+      let idAsignacion = (i + 1).toString(); // Fallback ID
+      let nombreCompleto = nombreAsignatura; // Usar el nombre real de la asignatura
+      
+      if (asignacion && asignacion.id_curso) {
+        idAsignacion = `${asignacion.id_asignacion}`;
+        
+        try {
+          // Obtener información del curso si tenemos el ID
+          const cursoResponse = await fetch(`http://localhost:8004/cursos/${asignacion.id_curso}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          if (cursoResponse.ok) {
+            const cursoData = await cursoResponse.json();
+            const nombreCurso = cursoData.nombre || `Curso ${asignacion.id_curso}`;
+            const gradoCurso = cursoData.grado || '';
+            nombreCompleto = gradoCurso 
+              ? `${nombreAsignatura} - ${gradoCurso} (${nombreCurso})`
+              : `${nombreAsignatura} (${nombreCurso})`;
+          } else {
+            nombreCompleto = `${nombreAsignatura} (Curso ${asignacion.id_curso})`;
+          }
+        } catch (error) {
+          console.warn(`Error al obtener info del curso ${asignacion.id_curso}:`, error);
+          nombreCompleto = `${nombreAsignatura} (Curso ${asignacion.id_curso})`;
+        }
+      }
+      
+      asignaturasConCurso.push({
+        id: idAsignacion,
+        nombre: nombreCompleto,
+        docente: profesorActual.nombre
+      });
+    }
+
+    console.log(`✅ Asignaturas obtenidas para profesor ${profesorActual.nombre}:`, asignaturasConCurso);
+    return asignaturasConCurso;
+    
   } catch (error) {
     console.error('Error al obtener asignaturas del profesor:', error);
-    // Retornar solo un elemento de error en caso de fallo
+    
+    // Fallback usando solo el endpoint de nombres (sabemos que funciona)
+    try {
+      const fallbackToken = getAuthToken();
+      const fallbackHeaders: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (fallbackToken) {
+        fallbackHeaders['Authorization'] = `Bearer ${fallbackToken}`;
+      }
+      
+      const asignaturasResponse = await fetch(`${API_BASE_URL}/asignacion_asignaturas/nombres_asignaturas/por_profesor/${profesorId}`, {
+        method: 'GET',
+        headers: fallbackHeaders
+      });
+
+      if (asignaturasResponse.ok) {
+        const asignaturasData: AsignaturaNombreResponse[] = await asignaturasResponse.json();
+        const profesorActual = await getProfesorActual();
+        
+        return asignaturasData.map((asignatura, index) => ({
+          id: (index + 1).toString(),
+          nombre: asignatura.nombre,
+          docente: profesorActual.nombre
+        }));
+      }
+    } catch (fallbackError) {
+      console.error('Error en fallback:', fallbackError);
+    }
+    
+    // Último fallback
     return [{
       id: 'error',
       nombre: 'Error de carga',
@@ -169,125 +275,323 @@ const fakeEstudiantesGeneral: EstudianteAsignatura[] = [
 ];
 
 // --- Mapeo de IDs de materias a sus datos de prueba ---
+// Nota: Los valores de 'docente' se actualizarán dinámicamente con el nombre real del profesor
 const fakeMateriaDetails: { [key: string]: MateriaDetalle } = {
   // IDs tipo string (compatibilidad anterior)
   'm1': { 
     id: 'm1',
     nombre: 'Matemáticas',
-    docente: 'Prof. Paula Forero',
+    docente: 'Prof. Sistema', // Se actualiza dinámicamente
     idCurso: 'c1',
     nombreCurso: 'Curso 101',
     idProfesorAsignado: 'profesor123',
-    nombreProfesorAsignado: 'Prof. Juan Pérez',
+    nombreProfesorAsignado: 'Prof. Sistema', // Se actualiza dinámicamente
     estudiantes: fakeEstudiantesGeneral.slice(0, 3),
   },
   'm2': { 
     id: 'm2',
     nombre: 'Historia',
-    docente: 'Prof. Paula Forero',
+    docente: 'Prof. Sistema', // Se actualiza dinámicamente
     idCurso: 'c1',
     nombreCurso: 'Curso 301',
     idProfesorAsignado: 'profesor123',
-    nombreProfesorAsignado: 'Prof. Juan Pérez',
+    nombreProfesorAsignado: 'Prof. Sistema', // Se actualiza dinámicamente
     estudiantes: fakeEstudiantesGeneral.slice(1, 4)
   },
   // IDs numéricos (compatibilidad con API)
   '1': {
     id: '1',
     nombre: 'Matemáticas Avanzadas',
-    docente: 'Prof. Paula Forero',
+    docente: 'Prof. Sistema', // Se actualiza dinámicamente
     idCurso: 'c1',
     nombreCurso: 'Curso 101',
     idProfesorAsignado: 'profesor123',
-    nombreProfesorAsignado: 'Prof. Juan Pérez',
+    nombreProfesorAsignado: 'Prof. Sistema', // Se actualiza dinámicamente
     estudiantes: fakeEstudiantesGeneral.slice(0, 2),
   },
   '2': {
     id: '2',
     nombre: 'Historia Universal',
-    docente: 'Prof. Paula Forero',
+    docente: 'Prof. Sistema', // Se actualiza dinámicamente
     idCurso: 'c2',
     nombreCurso: 'Curso 201',
     idProfesorAsignado: 'profesor123',
-    nombreProfesorAsignado: 'Prof. Juan Pérez',
+    nombreProfesorAsignado: 'Prof. Sistema', // Se actualiza dinámicamente
     estudiantes: fakeEstudiantesGeneral.slice(2, 4)
   },
   '3': {
     id: '3',
     nombre: 'Ciencias Naturales',
-    docente: 'Prof. María González',
+    docente: 'Prof. Sistema', // Se actualiza dinámicamente
     idCurso: 'c3',
     nombreCurso: 'Curso 301',
     idProfesorAsignado: 'profesor123',
-    nombreProfesorAsignado: 'Prof. Juan Pérez',
+    nombreProfesorAsignado: 'Prof. Sistema', // Se actualiza dinámicamente
     estudiantes: fakeEstudiantesGeneral.slice(0, 4)
   }
 };
 
 
 /**
- * Función para obtener los detalles de una materia específica (incluyendo sus estudiantes, asistencias y calificaciones).
- * Usa solo el endpoint de asignaturas por profesor y datos de fallback.
+ * Función auxiliar para extraer solo el nombre de la asignatura 
+ * del formato "Matemáticas - Sexto (601)" a solo "Matemáticas"
+ */
+function extraerNombreAsignatura(nombreCompleto: string): string {
+  // Si contiene " - ", tomar solo la parte antes del guión
+  if (nombreCompleto.includes(' - ')) {
+    return nombreCompleto.split(' - ')[0].trim();
+  }
+  
+  // Si contiene " (", tomar solo la parte antes del paréntesis
+  if (nombreCompleto.includes(' (')) {
+    return nombreCompleto.split(' (')[0].trim();
+  }
+  
+  // Si no contiene ningún separador, devolver el nombre tal como está
+  return nombreCompleto.trim();
+}
+
+/**
+ * Función para obtener información de curso donde se enseña una materia específica por un profesor
+ */
+async function getCursoByMateriaAndProfesor(materiaNombre: string, profesorId: number): Promise<{ id: string; nombre: string; grado: string } | null> {
+  try {
+    // Obtener todos los cursos del profesor
+    const cursosResponse = await fetch(`http://localhost:8004/cursos/profesores/${profesorId}/cursos`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!cursosResponse.ok) {
+      console.warn(`No se pudieron obtener los cursos del profesor ${profesorId}`);
+      return null;
+    }
+
+    const cursosData = await cursosResponse.json();
+    
+    // Para cada curso, verificar si tiene la materia asignada
+    for (const curso of cursosData) {
+      try {
+        const materiaResponse = await fetch(
+          `http://localhost:8001/asignacion_asignaturas/asignatura/por_profesor_y_curso?id_profesor=${profesorId}&id_curso=${curso.id_curso}`
+        );
+        
+        if (materiaResponse.ok) {
+          const materiaData = await materiaResponse.json();
+          
+          // Verificar si esta respuesta coincide con la materia buscada
+          if (Array.isArray(materiaData)) {
+            const materiaEncontrada = materiaData.find((m: any) => m.nombre === materiaNombre);
+            if (materiaEncontrada) {
+              return {
+                id: curso.id_curso.toString(),
+                nombre: curso.nombre,
+                grado: curso.grado
+              };
+            }
+          } else if (materiaData.nombre === materiaNombre) {
+            return {
+              id: curso.id_curso.toString(),
+              nombre: curso.nombre,
+              grado: curso.grado
+            };
+          }
+        }
+      } catch (error) {
+        console.warn(`Error al verificar materia en curso ${curso.id_curso}:`, error);
+        continue;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error al obtener información de curso:', error);
+    return null;
+  }
+}
+
+/**
+ * Función para obtener los detalles de una materia específica usando el ID de asignación
+ * Integra con APIs reales para obtener información de curso y profesor específicos
  *
- * @param materiaId El ID de la materia a consultar.
+ * @param materiaId El ID de la asignación (no de la materia, sino de la asignación específica)
  * @returns Una Promesa que resuelve a los detalles de la materia.
  * @throws Error si la materia no se encuentra o hay un problema de comunicación con el backend.
  */
 export async function getMateriaDetalle(materiaId: string): Promise<MateriaDetalle> {
-  console.log(`[AsignaturaService] Solicitando detalles para la materia ID: ${materiaId}`);
+  console.log(`[AsignaturaService] Solicitando detalles para la asignación ID: ${materiaId}`);
 
+  // Obtener información del profesor actual
+  const profesorActual = await getProfesorActual();
+
+  // ESTRATEGIA 1: Intentar con el método de asignaturas que sabemos que funciona
   try {
-    // Obtener las asignaturas del profesor para encontrar el nombre de la materia
     const asignaturas = await getAsignaturasDelProfesor();
     const asignaturaEncontrada = asignaturas.find(a => a.id === materiaId);
     
-    if (!asignaturaEncontrada) {
-      throw new Error(`No se encontró la asignatura con ID: ${materiaId}`);
+    if (asignaturaEncontrada) {
+      console.log(`✅ Asignatura encontrada en lista: ${asignaturaEncontrada.nombre}`);
+      
+      // Extraer solo el nombre de la asignatura sin información de curso
+      const nombreLimpio = extraerNombreAsignatura(asignaturaEncontrada.nombre);
+      
+      // Intentar obtener información adicional del curso si es posible
+      try {
+        const profesorId = getProfesorLogueadoId();
+        if (profesorId) {
+          const asignacionResponse = await fetch(`http://localhost:8001/asignacion_asignaturas/${materiaId}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+
+          if (asignacionResponse.ok) {
+            const asignacionData: AsignacionCompleta = await asignacionResponse.json();
+            
+            const cursoResponse = await fetch(`http://localhost:8004/cursos/${asignacionData.id_curso}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (cursoResponse.ok) {
+              const cursoData = await cursoResponse.json();
+              const nombreCurso = `${cursoData.nombre} (${cursoData.grado})`;
+              
+              const materiaDetalle: MateriaDetalle = {
+                id: materiaId,
+                nombre: nombreLimpio, // Usar solo el nombre de la asignatura
+                docente: profesorActual.nombre,
+                idCurso: cursoData.id_curso.toString(),
+                nombreCurso: nombreCurso,
+                idProfesorAsignado: profesorActual.id,
+                nombreProfesorAsignado: profesorActual.nombre,
+                estudiantes: fakeEstudiantesGeneral.slice(0, 3),
+                gradoCurso: cursoData.grado,
+                estado: 'activa'
+              };
+              
+              console.log(`✅ Detalles completos obtenidos para ${nombreLimpio}`);
+              return materiaDetalle;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('No se pudo obtener información adicional del curso, usando datos básicos');
+      }
+      
+      // Usar información básica de la asignatura encontrada
+      const materiaDetalle: MateriaDetalle = {
+        id: materiaId,
+        nombre: nombreLimpio, // Usar solo el nombre de la asignatura
+        docente: profesorActual.nombre,
+        idCurso: 'desconocido',
+        nombreCurso: 'Curso información no disponible',
+        idProfesorAsignado: profesorActual.id,
+        nombreProfesorAsignado: profesorActual.nombre,
+        estudiantes: fakeEstudiantesGeneral.slice(0, 3)
+      };
+      
+      console.log(`📋 Usando datos básicos de asignatura ${nombreLimpio}`);
+      return materiaDetalle;
+    }
+  } catch (error) {
+    console.warn('No se pudo obtener lista de asignaturas, intentando método directo');
+  }
+
+  // ESTRATEGIA 2: Método original (directo por API)
+  try {
+    const profesorId = getProfesorLogueadoId();
+    if (!profesorId) {
+      throw new Error('No se encontró el ID del profesor logueado');
+    }
+    
+    // Obtener información específica de la asignación
+    const asignacionResponse = await fetch(`http://localhost:8001/asignacion_asignaturas/${materiaId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!asignacionResponse.ok) {
+      throw new Error(`Error al obtener información de la asignación: ${asignacionResponse.status}`);
     }
 
-    // Obtener información del profesor actual
-    const profesorActual = await getProfesorActual();
+    const asignacionData: AsignacionCompleta = await asignacionResponse.json();
     
-    // Crear el detalle de la materia usando solo la información disponible
-    const materiaDetalle: MateriaDetalle = {
-      id: materiaId,
-      nombre: asignaturaEncontrada.nombre,
-      docente: profesorActual.nombre,
-      idCurso: 'c1', // Datos por defecto hasta implementar API de cursos
-      nombreCurso: 'Curso por determinar', // Datos por defecto
-      idProfesorAsignado: profesorActual.id,
-      nombreProfesorAsignado: profesorActual.nombre,
-      estudiantes: fakeEstudiantesGeneral.slice(0, 3) // Datos de prueba hasta implementar API de estudiantes
+    // Obtener información del curso
+    const cursoResponse = await fetch(`http://localhost:8004/cursos/${asignacionData.id_curso}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    let cursoInfo = {
+      id: asignacionData.id_curso.toString(),
+      nombre: `Curso ${asignacionData.id_curso}`,
+      grado: ''
     };
 
-    console.log(`✅ Detalles obtenidos para materia ${asignaturaEncontrada.nombre}`);
-    return materiaDetalle;
-  } catch (error) {
-    console.warn(`⚠️ Error al obtener detalles de materia ${materiaId}, usando datos de prueba:`, error);
-    
-    // Fallback: intentar con datos de prueba usando el ID como está
-    let materia = fakeMateriaDetails[materiaId];
-    
-    // Si no se encuentra y el ID parece ser numérico, intentar con los IDs de prueba conocidos
-    if (!materia && !isNaN(Number(materiaId))) {
-      const fallbackIds = Object.keys(fakeMateriaDetails);
-      const fallbackIndex = parseInt(materiaId) % fallbackIds.length;
-      const fallbackId = fallbackIds[fallbackIndex];
-      materia = fakeMateriaDetails[fallbackId];
-      
-      if (materia) {
-        // Actualizar el ID para que coincida con el solicitado
-        materia = { ...materia, id: materiaId };
-        console.log(`📋 Usando datos de prueba con ID mapeado: ${materiaId} -> ${fallbackId}`);
-      }
+    if (cursoResponse.ok) {
+      const cursoData = await cursoResponse.json();
+      cursoInfo = {
+        id: cursoData.id_curso.toString(),
+        nombre: cursoData.nombre,
+        grado: cursoData.grado
+      };
     }
+    
+    // Crear el detalle de la materia usando información real
+    const nombreAsignatura = asignacionData.nombre || asignacionData.nombre_asignatura || 'Asignatura sin nombre';
+    const materiaDetalle: MateriaDetalle = {
+      id: materiaId,
+      nombre: nombreAsignatura,
+      docente: profesorActual.nombre,
+      idCurso: cursoInfo.id,
+      nombreCurso: `${cursoInfo.nombre} (${cursoInfo.grado})`,
+      idProfesorAsignado: profesorActual.id,
+      nombreProfesorAsignado: profesorActual.nombre,
+      estudiantes: fakeEstudiantesGeneral.slice(0, 3), // TODO: Integrar con API de estudiantes
+      gradoCurso: cursoInfo.grado,
+      estado: 'activa'
+    };
+
+    console.log(`✅ Detalles obtenidos para asignación ${nombreAsignatura} en ${cursoInfo.nombre}`);
+    return materiaDetalle;
+    
+  } catch (error) {
+    console.warn(`⚠️ Error al obtener detalles de asignación ${materiaId}:`, error);
+  }
+
+  // ESTRATEGIA 3: Último fallback con datos de prueba
+  let materia = fakeMateriaDetails[materiaId];
+  
+  if (!materia && !isNaN(Number(materiaId))) {
+    const fallbackIds = Object.keys(fakeMateriaDetails);
+    const fallbackIndex = parseInt(materiaId) % fallbackIds.length;
+    const fallbackId = fallbackIds[fallbackIndex];
+    materia = fakeMateriaDetails[fallbackId];
     
     if (materia) {
-      console.log(`📋 Usando datos de prueba para materia ${materia.nombre}`);
-      return materia;
-    } else {
-      throw new Error(`Materia no encontrada con el ID proporcionado: ${materiaId}`);
+      materia = { 
+        ...materia, 
+        id: materiaId,
+        docente: profesorActual.nombre,
+        nombreProfesorAsignado: profesorActual.nombre,
+        idProfesorAsignado: profesorActual.id
+      };
+      console.log(`📋 Usando datos de prueba con ID mapeado: ${materiaId} -> ${fallbackId}`);
     }
+  } else if (materia) {
+    materia = {
+      ...materia,
+      docente: profesorActual.nombre,
+      nombreProfesorAsignado: profesorActual.nombre,
+      idProfesorAsignado: profesorActual.id
+    };
+  }
+  
+  if (materia) {
+    console.log(`📋 Usando datos de prueba para materia ${materia.nombre} con profesor ${profesorActual.nombre}`);
+    return materia;
+  } else {
+    throw new Error(`Materia no encontrada con el ID proporcionado: ${materiaId}`);
   }
 }
 
@@ -346,9 +650,22 @@ export async function getProfesorActual(): Promise<{ id: string; nombre: string 
   if (userData) {
     try {
       const user = JSON.parse(userData);
+      // Construir el nombre completo desde nombres y apellidos
+      const nombres = user.nombres || '';
+      const apellidos = user.apellidos || '';
+      let nombreCompleto = '';
+      
+      if (nombres || apellidos) {
+        nombreCompleto = `${nombres} ${apellidos}`.trim();
+      } else if (user.name) {
+        nombreCompleto = user.name;
+      } else {
+        nombreCompleto = 'Prof. Usuario Actual';
+      }
+      
       return { 
         id: user.id_profesor?.toString() || 'profesor123', 
-        nombre: user.nombre || 'Prof. Usuario Actual'
+        nombre: nombreCompleto
       };
     } catch (error) {
       console.error('Error parsing user data:', error);
