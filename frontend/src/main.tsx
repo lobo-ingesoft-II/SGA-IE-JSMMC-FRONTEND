@@ -10,13 +10,13 @@ import { AuthProvider } from './context/authContext.tsx'; // <-- Importa el Auth
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <BreakpointsProvider>
-        <CssBaseline />
-        <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider theme={theme}>
+        <BreakpointsProvider>
+          <CssBaseline />
           <RouterProvider router={router} />
-        </AuthProvider>
-      </BreakpointsProvider>
-    </ThemeProvider>
+        </BreakpointsProvider>
+      </ThemeProvider>
+    </AuthProvider>
   </React.StrictMode>,
 );

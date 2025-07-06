@@ -77,13 +77,17 @@ const Login = (): ReactElement => {
     }
 
     const data = await response.json();
-    const { access_token, rol, id, correo } = data;
+    const { access_token, rol, id, correo, id_profesor, nombres, apellidos } = data;
 
     const userData = {
       id,
-      name: 'Nombre no disponible', // Puedes actualizar si tu backend devuelve el nombre
+      name: nombres && apellidos ? `${nombres} ${apellidos}` : (nombres || 'Nombre no disponible'),
       email: correo,
       role: rol,
+      id_profesor: id_profesor,
+      // Mantener también los campos originales para mayor compatibilidad
+      nombres: nombres,
+      apellidos: apellidos,
     };
 
     // Guardar en localStorage
@@ -240,13 +244,16 @@ login(access_token, userData);
           />
         }
       >
-        <Image
+        <Box
+          component="img"
           alt="Login banner"
           src={loginBanner}
           sx={{
             width: '50%',
+            height: 'auto',               // mantiene proporción
             display: { xs: 'none', md: 'block' },
-            objectFit: 'cover',
+            objectFit: 'contain',         // ajusta entera, sin recortar
+            objectPosition: 'center',     // opcional, centra la imagen
           }}
         />
       </Suspense>

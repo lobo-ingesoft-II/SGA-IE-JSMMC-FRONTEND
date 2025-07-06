@@ -5,6 +5,10 @@ export type User = {
   id: number; // Nuevo campo: ID del usuario
   name: string;
   role: 'admin' | 'profesor' | 'acudiente' | string;
+  id_profesor: number | null;
+  email?: string; // Email del usuario
+  nombres?: string; // Nombres del usuario
+  apellidos?: string; // Apellidos del usuario
 };
 
 type AuthContextType = {
@@ -63,6 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth debe usarse dentro de AuthProvider');
+  if (!context) {
+    console.error('❌ Error: useAuth llamado fuera de AuthProvider');
+    console.error('🔍 Stack trace:', new Error().stack);
+    throw new Error('useAuth debe usarse dentro de AuthProvider');
+  }
   return context;
 }

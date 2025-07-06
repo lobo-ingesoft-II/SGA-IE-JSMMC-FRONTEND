@@ -94,7 +94,7 @@ const Inicio: React.FC = () => {
     <Box sx={{ p: 3, width: '100%' }}>
       <Typography variant="h5" component="h1" gutterBottom sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
         <DashboardIcon sx={{ mr: 1 }} />
-        Bienvenido al Panel de Profesor, {profesorData.nombre} {profesorData.apellidos}
+        Bienvenido al Panel de Docentes, {profesorData.nombre} {profesorData.apellidos}
       </Typography>
 
       <Grid container spacing={1} sx={{ width: '100%', m: 0 }}>
@@ -160,10 +160,10 @@ const Inicio: React.FC = () => {
               </Typography>
             </Box>
             <Box sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mt: 2, mb: 1 }}>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1, color: theme.palette.primary.main, fontWeight: 600 }}>
                 Sedes Asignadas:
               </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap">
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 {profesorData.sedesAsignadas.length > 0 ? (
                   profesorData.sedesAsignadas.map((sede) => (
                     <Chip
@@ -172,57 +172,99 @@ const Inicio: React.FC = () => {
                       label={sede.nombre}
                       color="info"
                       variant="outlined"
-                      size="small"
-                      sx={{ mb: 1 }}
+                      size="medium"
+                      clickable
+                      onClick={() => navigate(`/PanelProfesor/${user?.id}/Sedes/${sede.id}`)}
+                      sx={{ 
+                        mb: 1,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: theme.palette.info.light,
+                          color: theme.palette.info.contrastText
+                        }
+                      }}
                     />
                   ))
                 ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Ninguna sede asignada.
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    No hay sedes asignadas.
                   </Typography>
                 )}
               </Stack>
 
-              <Typography variant="h5" sx={{ mt: 2, mb: 1 }}>
+              <Typography variant="h6" sx={{ mt: 3, mb: 1, color: theme.palette.primary.main, fontWeight: 600 }}>
                 Cursos Asignados:
               </Typography>
-              <List dense disablePadding sx={{ alignItems: 'center' }}>
+              <List dense disablePadding sx={{ backgroundColor: theme.palette.grey[50], borderRadius: 1, p: 1 }}>
                 {profesorData.cursosAsignados.length > 0 ? (
                   profesorData.cursosAsignados.map((curso) => (
-                    <ListItem key={curso.id} disableGutters sx={{ px: 0 }}>
+                    <ListItem 
+                      key={curso.id} 
+                      disableGutters 
+                      sx={{ 
+                        px: 1, 
+                        py: 0.5,
+                        borderRadius: 1,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: theme.palette.primary.light,
+                          color: theme.palette.primary.contrastText
+                        }
+                      }}
+                      onClick={() => navigate(`/PanelProfesor/${user?.id}/Cursos/${curso.id}`)}
+                    >
                       <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                         <SchoolIcon fontSize="small" color="primary" style={{ marginRight: 8 }} />
-                        <Typography variant="subtitle2" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {`${curso.nombre} (${curso.grado})`}
+                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <strong>{curso.nombre}</strong> - {curso.grado}
                         </Typography>
                       </Box>
                     </ListItem>
                   ))
                 ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Ningún curso asignado.
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', p: 1 }}>
+                    No hay cursos asignados.
                   </Typography>
                 )}
               </List>
 
-              <Typography variant="h5" sx={{ mt: 2, mb: 1 }}>
-                Materias Asignadas:
+              <Typography variant="h6" sx={{ mt: 3, mb: 1, color: theme.palette.primary.main, fontWeight: 600 }}>
+                Asignaturas Asignadas:
               </Typography>
-              <List dense disablePadding>
+              <List dense disablePadding sx={{ backgroundColor: theme.palette.grey[50], borderRadius: 1, p: 1 }}>
                 {profesorData.materiasAsignadas.length > 0 ? (
                   profesorData.materiasAsignadas.map((materia) => (
-                    <ListItem key={materia.id} disableGutters sx={{ px: 0 }}>
+                    <ListItem 
+                      key={materia.id} 
+                      disableGutters 
+                      sx={{ 
+                        px: 1, 
+                        py: 0.5,
+                        borderRadius: 1,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: theme.palette.secondary.light,
+                          color: theme.palette.secondary.contrastText
+                        }
+                      }}
+                      onClick={() => navigate(`/PanelProfesor/${user?.id}/Asignatura/${materia.id}`)}
+                    >
                       <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                         <BookIcon fontSize="small" color="secondary" style={{ marginRight: 8 }} />
-                        <Typography variant="subtitle2" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {`${materia.nombre} (${materia.cursoNombre})`}
-                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {materia.nombre}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Docente: {materia.docente}
+                          </Typography>
+                        </Box>
                       </Box>
                     </ListItem>
                   ))
                 ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Ninguna materia asignada.
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', p: 1 }}>
+                    No hay materias asignadas.
                   </Typography>
                 )}
               </List>

@@ -10,7 +10,6 @@ import {
 } from "@mui/material";
 import IconifyIcon from "../../../components/base/IconifyIcon";
 import { MouseEvent, useState, useEffect } from "react";
-import { getProfesorInicioData } from "../../../../services/PanelProfesor/inicioService";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../context/authContext";
 
@@ -23,18 +22,41 @@ const AccountDropdown = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await getProfesorInicioData();
-        if (data?.nombre && data?.apellidos) {
-          setNombreCompleto(`${data.nombre} ${data.apellidos}`);
-        } else if (data?.nombre) {
-          setNombreCompleto(data.nombre);
+    try {
+      const userData = localStorage.getItem('user');
+      
+      if (userData) {
+        const userInfo = JSON.parse(userData);
+        
+        // Prioridad 1: usar el campo 'name' que ya viene formateado desde el login
+        if (userInfo.name && userInfo.name !== "Nombre no disponible") {
+          setNombreCompleto(userInfo.name);
         }
-      } catch (err) {
-        console.error("Error al cargar el nombre del profesor:", err);
+        // Prioridad 2: nombres y apellidos (por si acaso)
+        else if (userInfo.nombres && userInfo.apellidos) {
+          const nombreCompleto = `${userInfo.nombres} ${userInfo.apellidos}`;
+          setNombreCompleto(nombreCompleto);
+        } 
+        // Prioridad 3: solo nombres
+        else if (userInfo.nombres) {
+          setNombreCompleto(userInfo.nombres);
+        } 
+        // Prioridad 4: usar email como fallback
+        else if (userInfo.email) {
+          const emailName = userInfo.email.split('@')[0].replace(/\./g, ' ');
+          const formattedName = emailName.split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+          setNombreCompleto(formattedName);
+        }
+        else {
+          setNombreCompleto("Usuario");
+        }
       }
-    })();
+    } catch (err) {
+      console.error("Error al cargar el nombre del usuario:", err);
+      setNombreCompleto("Usuario");
+    }
   }, []);
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {

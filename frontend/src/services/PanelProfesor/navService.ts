@@ -2,7 +2,7 @@ import { NavItem } from '../../helpers/navItem';
 import { Sede } from '../../models/PanelProfesor/sede';
 import { Curso } from '../../models/PanelProfesor/curso';
 import { Materia } from '../../models/PanelProfesor/materia';
-import { MateriaDetalle, getMateriaDetalle } from './asignaturaService';
+import { getAsignaturasDelProfesor } from './asignaturaService';
 
 export async function fetchNavItems(): Promise<NavItem[]> {
   const userData = localStorage.getItem('user');
@@ -21,9 +21,9 @@ export async function fetchNavItems(): Promise<NavItem[]> {
 
   try {
     const [sedes, cursos, asignaturas] = await Promise.all([
-      fetchSedes(),
+      fetchSedes(profesorId),
       fetchCursosDelProfesor(profesorId),
-      fetchAsignaturasParaSidebar()
+      getAsignaturasDelProfesor()
     ]);
 
     const sedesSub: NavItem[] = sedes.map((s) => ({
@@ -81,11 +81,11 @@ export async function fetchNavItems(): Promise<NavItem[]> {
   }
 }
 
-async function fetchSedes(): Promise<Sede[]> {
+async function fetchSedes(profesorId: number): Promise<Sede[]> {
   try {
     const token = localStorage.getItem('token');
 
-    const res = await fetch('http://localhost:8007/sedes/', {
+    const res = await fetch(`http://localhost:8000/sedes/por_profesor/${profesorId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -136,22 +136,4 @@ async function fetchCursosDelProfesor(profesorId: number): Promise<CursoConSede[
   }
 }
 
-async function fetchAsignaturasParaSidebar(): Promise<Materia[]> {
-  const materiaIds = ['m1', 'm2', 'm3', 'm4'];
-  const asignaturasDetalle: MateriaDetalle[] = [];
 
-  for (const id of materiaIds) {
-    try {
-      const detalle = await getMateriaDetalle(id);
-      asignaturasDetalle.push(detalle);
-    } catch {
-      // Silenciar error
-    }
-  }
-
-  return asignaturasDetalle.map(detalle => ({
-    id: detalle.id,
-    nombre: detalle.nombre,
-    docente: detalle.docente
-  }));
-}

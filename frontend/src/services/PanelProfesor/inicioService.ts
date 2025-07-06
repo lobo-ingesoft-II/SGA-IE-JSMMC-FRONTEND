@@ -1,3 +1,5 @@
+import { getAsignaturasDelProfesor } from './asignaturaService';
+
 export interface ProfesorInicioData {
   id: string;
   nombre: string;
@@ -6,7 +8,7 @@ export interface ProfesorInicioData {
   rol: string;
   sedesAsignadas: { id: string; nombre: string }[];
   cursosAsignados: { id: string; nombre: string; grado: string }[];
-  materiasAsignadas: { id: string; nombre: string; cursoNombre: string }[];
+  materiasAsignadas: { id: string; nombre: string; docente: string }[];
 }
 
 export async function getProfesorInicioData(): Promise<ProfesorInicioData> {
@@ -19,29 +21,20 @@ export async function getProfesorInicioData(): Promise<ProfesorInicioData> {
 
   const userId = parseInt(user.id, 10);
 
-  // 1. Obtener todos los usuarios
-  const allUsersRes = await fetch('http://localhost:8009/getUsers', {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  });
+  // Usar la información del usuario desde el contexto/localStorage
+  const currentUser = {
+    id_usuario: userId,
+    nombres: user.nombres || 'Nombre',
+    apellidos: user.apellidos || 'No disponible',
+    correo: user.email || '',
+    email: user.email || '',
+    rol: user.role || 'profesor',
+  };
 
-  if (!allUsersRes.ok) {
-    throw new Error('No se pudieron obtener los usuarios');
-  }
+  // Obtener sedes asignadas
+  const profesorId = user.id_profesor || 2;
 
-  const allUsers = await allUsersRes.json();
-
-  // 2. Buscar usuario actual por ID
-  const currentUser = allUsers.find((u: any) => u.id_usuario === userId);
-
-  if (!currentUser) {
-    throw new Error('Usuario no encontrado por ID');
-  }
-
-  // 3. Obtener sedes asignadas
-  const sedesRes = await fetch('http://localhost:8007/sedes/', {
+  const sedesRes = await fetch(`http://localhost:8000/sedes/por_profesor/${profesorId}`, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -61,7 +54,6 @@ export async function getProfesorInicioData(): Promise<ProfesorInicioData> {
   }));
 
   // 4. Obtener cursos asignados
-  const profesorId = user.id_profesor || 2;
 
   const cursosRes = await fetch(`http://localhost:8004/cursos/profesores/${profesorId}/cursos`, {
     method: 'GET',
@@ -80,12 +72,27 @@ export async function getProfesorInicioData(): Promise<ProfesorInicioData> {
     grado: c.grado
   }));
 
-  // 5. Materias simuladas (puedes conectar tu API cuando esté lista)
-  const materiasAsignadas = [
-    { id: 'm1', nombre: 'Matemáticas', cursoNombre: 'Curso Prueba A' },
-    { id: 'm2', nombre: 'Historia', cursoNombre: 'Curso Prueba A' },
-    { id: 'm4', nombre: 'Química', cursoNombre: 'Curso Prueba B' }
-  ];
+  // 5. Obtener materias asignadas usando el mismo servicio que navService
+  let materiasAsignadas: { id: string; nombre: string; docente: string }[] = [];
+  
+  try {
+    // Usar la misma función que usa navService.ts
+    const asignaturas = await getAsignaturasDelProfesor();
+    // Construir el nombre completo del profesor
+    const nombreCompletoProfesor = `${currentUser.nombres} ${currentUser.apellidos}`;
+    
+    materiasAsignadas = asignaturas.map((asignatura) => ({
+      id: asignatura.id,
+      nombre: asignatura.nombre,
+      docente: nombreCompletoProfesor
+    }));
+  } catch (error) {
+    console.error('Error al obtener materias asignadas:', error);
+    // Fallback a datos simulados solo en caso de error
+    materiasAsignadas = [
+      { id: 'm1', nombre: 'Error de carga', docente: 'Sistema' }
+    ];
+  }
 
   // 6. Devolver datos finales
   return {

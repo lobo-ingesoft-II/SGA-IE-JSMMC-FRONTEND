@@ -25,20 +25,18 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { getCursoById } from '../../../../../../services/PanelProfesor/cursoService';
-import type { CursoConSede } from '../../../../../../services/PanelProfesor/cursoService';
+import type { Curso } from '../../../../../../models/PanelProfesor/curso';
 
 const VistaCursos = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { cursoId } = useParams<{ cursoId: string }>();
   
-  const [curso, setCurso] = useState<CursoConSede | null>(null);
+  const [curso, setCurso] = useState<Curso | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [estudiantes, setEstudiantes] = useState<any[]>([]);
-  const [materias, setMaterias] = useState<any[]>([]);
   const [loadingEstudiantes, setLoadingEstudiantes] = useState(false);
-  const [loadingMaterias, setLoadingMaterias] = useState(false);
 
   // Datos fake para estudiantes
   const fakeEstudiantes = [
@@ -48,15 +46,6 @@ const VistaCursos = () => {
     { id: 'e4', nombre: 'María Gómez', inasistencias: 2 },
     { id: 'e5', nombre: 'Juan Rodríguez', inasistencias: 5 },
     { id: 'e6', nombre: 'Sofía Vargas', inasistencias: 1 }
-  ];
-
-  // Datos fake para materias
-  const fakeMaterias = [
-    { id: 'm1', nombre: 'Matemáticas', docente: 'Prof. García' },
-    { id: 'm2', nombre: 'Historia', docente: 'Prof. Díaz' },
-    { id: 'm3', nombre: 'Ciencias', docente: 'Prof. López' },
-    { id: 'm4', nombre: 'Literatura', docente: 'Prof. Martínez' },
-    { id: 'm5', nombre: 'Educación Física', docente: 'Prof. Ramírez' }
   ];
 
   useEffect(() => {
@@ -69,23 +58,17 @@ const VistaCursos = () => {
           throw new Error("ID de curso no definido");
         }
         
-        // Obtener el curso por ID
+        // Obtener el curso por ID (ya incluye las materias del endpoint)
         const cursoData = await getCursoById(cursoId);
         setCurso(cursoData);
         
-        // Simular carga de estudiantes y materias
+        // Simular carga de estudiantes
         setLoadingEstudiantes(true);
-        setLoadingMaterias(true);
         
         setTimeout(() => {
           setEstudiantes(fakeEstudiantes);
           setLoadingEstudiantes(false);
         }, 800);
-        
-        setTimeout(() => {
-          setMaterias(fakeMaterias);
-          setLoadingMaterias(false);
-        }, 1000);
         
       } catch (err: any) {
         setError(`Error al cargar el curso: ${err.message}`);
@@ -226,11 +209,11 @@ const VistaCursos = () => {
             Materias del curso
           </Typography>
 
-          {loadingMaterias ? (
+          {loading ? (
             <Box display="flex" justifyContent="center" py={4}>
               <CircularProgress />
             </Box>
-          ) : materias.length === 0 ? (
+          ) : !curso?.materias || curso.materias.length === 0 ? (
             <Box sx={{ 
               p: 3, 
               backgroundColor: theme.palette.grey[100], 
@@ -254,7 +237,7 @@ const VistaCursos = () => {
                 gap: 3
               }}
             >
-              {materias.map((materia: any) => (
+              {curso.materias.map((materia: any) => (
                 <Paper
                   key={materia.id}
                   elevation={2}
