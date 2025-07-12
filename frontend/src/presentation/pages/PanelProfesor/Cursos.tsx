@@ -1,5 +1,4 @@
 import { ReactElement } from 'react';
-import { Box, Typography, LinearProgress } from '@mui/material';
 import VistaCursos from '../../components/sections/dashboard/PanelProfesor/Cursos/vistaCursos';
 
 const Cursos = (): ReactElement => {
