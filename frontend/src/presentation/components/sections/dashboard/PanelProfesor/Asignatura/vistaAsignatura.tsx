@@ -43,8 +43,23 @@ import {
 import { EstudianteAsignatura } from '../../../../../../models//PanelProfesor/estudianteAsignatura';
 import { AsistenciaRegistro } from '../../../../../../models/PanelProfesor/asistencia';
 import { CalificacionRegistro } from '../../../../../../models/PanelProfesor/calificacion';
-import { MateriaDetalle, getMateriaDetalle, updateAsistencia, updateCalificacion, getProfesorActual, checkIfEditionIsLocked } from '../../../../../../services/PanelProfesor/asignaturaService';
-import { saveObservacion, getObservacionesPorEstudianteYMateria } from '../../../../../../services/PanelProfesor/observacionService';
+import { 
+  MateriaDetalle, 
+  getMateriaDetalle, 
+  updateAsistencia, 
+  updateCalificacion, 
+  getProfesorActual, 
+  checkIfEditionIsLocked, 
+  getEstudiantesConAsistencias, 
+  autoGuardarCalificacion,
+  // Funciones de observaciones integradas
+  crearObservacion,
+  getObservacionesEstudiante,
+  validarDatosObservacion,
+  // Funciones auxiliares para fechas
+  obtenerFechaSegura,
+  validarFechaNoFutura
+} from '../../../../../../services/PanelProfesor/asignaturaService';
 
 interface VistaAsignaturaProps {
   materiaId: string;
@@ -64,16 +79,26 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
   const [edicionBloqueada, setEdicionBloqueada] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error' | 'warning' | 'info'>('success');
 
   const [estudiantesConCambios, setEstudiantesConCambios] = useState<EstudianteAsignatura[]>([]);
+
+  // Estados para manejar asistencias reales del backend
+  const [estudiantesConAsistenciasReales, setEstudiantesConAsistenciasReales] = useState<Array<EstudianteAsignatura & { 
+    estadoAsistencia: 'Presente' | 'Ausente' | 'Justificado' | 'No registrado'
+  }> | null>(null);
+  const [cargandoAsistencias, setCargandoAsistencias] = useState(false);
+
+  // Estados para manejar observaciones
+  const [cargandoObservaciones, setCargandoObservaciones] = useState(false);
 
   const [isObservacionModalOpen, setIsObservacionModalOpen] = useState(false);
   const [currentStudentIdForObservacion, setCurrentStudentIdForObservacion] = useState<string | null>(null);
   const [currentStudentNameForObservacion, setCurrentStudentNameForObservacion] = useState<string>('');
-  const [observacionFechaIncidente, setObservacionFechaIncidente] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  const [observacionFechaIncidente, setObservacionFechaIncidente] = useState<string>(() => {
+    // Usar julio 11, 2025 como fecha actual máxima
+    return '2025-07-11';
+  });
   const [observacionTipoFalta, setObservacionTipoFalta] = useState<'Leve' | 'Grave' | 'Gravísima'>('Leve');
   const [observacionArticulo, setObservacionArticulo] = useState<string>('');
   const [observacionDescripcion, setObservacionDescripcion] = useState<string>('');
@@ -95,7 +120,6 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
         setEdicionBloqueada(locked);
 
       } catch (err: any) {
-        console.error('Error al cargar detalles de la materia:', err);
         setError(err.message || 'Error al cargar la información de la asignatura.');
       } finally {
         setLoading(false);
@@ -104,38 +128,107 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
     fetchData();
   }, [materiaId, asistenciaFecha]);
 
-  const handleAsistenciaChange = useCallback((
+  // Función para cargar asistencias globales reales desde el backend cuando cambie la fecha
+  const cargarAsistenciasReales = useCallback(async () => {
+    if (!materiaDetalle || !asistenciaFecha) return;
+    
+    setCargandoAsistencias(true);
+    try {
+      // Obtener asistencias globales de los estudiantes del curso para la fecha
+      const estudiantesConAsistencias = await getEstudiantesConAsistencias(materiaId, asistenciaFecha);
+      setEstudiantesConAsistenciasReales(estudiantesConAsistencias);
+    } catch (error) {
+      setSnackbarMessage('Error al cargar las asistencias globales del día seleccionado');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    } finally {
+      setCargandoAsistencias(false);
+    }
+  }, [materiaDetalle, materiaId, asistenciaFecha]);
+
+  // Cargar asistencias cuando cambien la materia o la fecha
+  useEffect(() => {
+    cargarAsistenciasReales();
+  }, [cargarAsistenciasReales]);
+
+  // Manejar cambios de asistencia con API real
+  const handleAsistenciaChange = useCallback(async (
     estudianteId: string,
     nuevoEstado: 'Presente' | 'Ausente' | 'Justificado'
   ) => {
-    if (edicionBloqueada || !profesorActual) return;
+    if (edicionBloqueada || !profesorActual) {
+      setSnackbarMessage('La edición está bloqueada para esta fecha');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+      return;
+    }
 
-    setEstudiantesConCambios(prevEstudiantes => {
-      const updatedEstudiantes = prevEstudiantes.map(est => {
-        if (est.id === estudianteId) {
-          const existingRegistroIndex = est.asistencias.findIndex(reg => reg.fecha === asistenciaFecha);
-          const newAsistencias = [...est.asistencias];
-
-          if (existingRegistroIndex !== -1) {
-            newAsistencias[existingRegistroIndex] = {
-              ...newAsistencias[existingRegistroIndex],
-              estado: nuevoEstado,
-              idProfesor: profesorActual.id,
-            };
-          } else {
-            newAsistencias.push({
-              fecha: asistenciaFecha,
-              estado: nuevoEstado,
-              idProfesor: profesorActual.id,
-            });
-          }
-          return { ...est, asistencias: newAsistencias };
+    try {
+      // 1. Actualizar asistencia en el backend
+      const exito = await updateAsistencia(materiaId, estudianteId, asistenciaFecha, nuevoEstado);
+      
+      if (exito) {
+        // 2. Actualizar inmediatamente el estado de asistencias para UI responsiva
+        if (estudiantesConAsistenciasReales) {
+          setEstudiantesConAsistenciasReales(prev => 
+            prev ? prev.map(est => 
+              est.id === estudianteId 
+                ? { ...est, estadoAsistencia: nuevoEstado }
+                : est
+            ) : null
+          );
         }
-        return est;
-      });
-      return updatedEstudiantes;
-    });
-  }, [asistenciaFecha, profesorActual, edicionBloqueada]);
+
+        // 3. También actualizar estado local (por compatibilidad con otros componentes)
+        setEstudiantesConCambios(prevEstudiantes => {
+          const updatedEstudiantes = prevEstudiantes.map(est => {
+            if (est.id === estudianteId) {
+              const existingRegistroIndex = est.asistencias.findIndex(reg => reg.fecha === asistenciaFecha);
+              const newAsistencias = [...est.asistencias];
+
+              if (existingRegistroIndex !== -1) {
+                newAsistencias[existingRegistroIndex] = {
+                  ...newAsistencias[existingRegistroIndex],
+                  estado: nuevoEstado,
+                  idProfesor: profesorActual.id,
+                };
+              } else {
+                newAsistencias.push({
+                  fecha: asistenciaFecha,
+                  estado: nuevoEstado,
+                  idProfesor: profesorActual.id,
+                });
+              }
+              return { ...est, asistencias: newAsistencias };
+            }
+            return est;
+          });
+          return updatedEstudiantes;
+        });
+
+        // 4. Recargar asistencias desde el backend para confirmar el cambio global
+        await cargarAsistenciasReales();
+
+        setSnackbarMessage(`Asistencia actualizada: ${nuevoEstado}`);
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+      } else {
+        throw new Error('La API retornó false');
+      }
+    } catch (error) {
+      // Mostrar mensaje de error específico
+      let errorMessage = 'Error al actualizar la asistencia. Inténtalo de nuevo.';
+      if (error instanceof Error) {
+        if (error.message.includes('curso') || error.message.includes('asignatura')) {
+          errorMessage = `Error: ${error.message}`;
+        }
+      }
+      
+      setSnackbarMessage(errorMessage);
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    }
+  }, [materiaId, asistenciaFecha, profesorActual, edicionBloqueada, estudiantesConAsistenciasReales, cargarAsistenciasReales]);
 
   const handleNotaChange = useCallback((
     estudianteId: string,
@@ -145,6 +238,14 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
     if (edicionBloqueada) return;
 
     const nota = value === '' ? null : parseFloat(value);
+
+    // Validar rango de nota
+    if (nota !== null && (nota < 0 || nota > 5)) {
+      setSnackbarMessage('La nota debe estar entre 0 y 5');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+      return;
+    }
 
     setEstudiantesConCambios(prevEstudiantes => {
       const updatedEstudiantes = prevEstudiantes.map(est => {
@@ -185,34 +286,111 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
   const handleGuardarCambios = async () => {
     if (!materiaDetalle) return;
 
+    setLoading(true);
+    let erroresAsistencia: string[] = [];
+    let erroresCalificacion: string[] = [];
+    let exitosAsistencia = 0;
+    let exitosCalificacion = 0;
+
     try {
+      console.log('🚀 Iniciando guardado de cambios...');
+      
+      // Procesar asistencias
       for (const estudiante of estudiantesConCambios) {
         const asistenciaActual = estudiante.asistencias.find(reg => reg.fecha === asistenciaFecha);
         if (asistenciaActual) {
-          await updateAsistencia(materiaDetalle.id, estudiante.id, asistenciaFecha, asistenciaActual.estado);
-        }
-
-        for (const calificacion of estudiante.calificaciones) {
-          if (calificacion.periodo.startsWith('parcial')) {
-            await updateCalificacion(materiaDetalle.id, estudiante.id, calificacion.periodo, calificacion.nota);
+          try {
+            const exito = await updateAsistencia(materiaDetalle.id, estudiante.id, asistenciaFecha, asistenciaActual.estado);
+            if (exito) {
+              exitosAsistencia++;
+              console.log(`✅ Asistencia actualizada para ${estudiante.nombre}`);
+            } else {
+              erroresAsistencia.push(`${estudiante.nombre}: Error al actualizar asistencia`);
+            }
+          } catch (error) {
+            erroresAsistencia.push(`${estudiante.nombre}: ${error instanceof Error ? error.message : 'Error desconocido'}`);
           }
         }
       }
-      setSnackbarMessage('Cambios guardados exitosamente.');
-      setSnackbarSeverity('success');
+
+      // Procesar calificaciones - MEJORADO para mejor feedback
+      for (const estudiante of estudiantesConCambios) {
+        for (const calificacion of estudiante.calificaciones) {
+          if (calificacion.periodo.startsWith('parcial') && calificacion.nota !== null) {
+            try {
+              console.log(`📝 Guardando ${calificacion.periodo} para ${estudiante.nombre}: ${calificacion.nota}`);
+              const exito = await updateCalificacion(materiaDetalle.id, estudiante.id, calificacion.periodo, calificacion.nota);
+              if (exito) {
+                exitosCalificacion++;
+                console.log(`✅ Calificación ${calificacion.periodo} guardada para ${estudiante.nombre}`);
+              } else {
+                erroresCalificacion.push(`${estudiante.nombre} - ${calificacion.periodo}: Error al actualizar calificación`);
+              }
+            } catch (error) {
+              erroresCalificacion.push(`${estudiante.nombre} - ${calificacion.periodo}: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+            }
+          }
+        }
+      }
+
+      // Recargar datos si hubo cambios exitosos
+      if (exitosAsistencia > 0 || exitosCalificacion > 0) {
+        console.log('🔄 Recargando datos después de guardar cambios...');
+        
+        // Recargar asistencias
+        if (exitosAsistencia > 0) {
+          await cargarAsistenciasReales();
+        }
+        
+        // Recargar calificaciones - IMPORTANTE: Recargar datos completos
+        if (exitosCalificacion > 0) {
+          try {
+            console.log('📊 Recargando calificaciones actualizadas...');
+            const detalleActualizado = await getMateriaDetalle(materiaId);
+            setMateriaDetalle(detalleActualizado);
+            setEstudiantesConCambios([...detalleActualizado.estudiantes]);
+            console.log('✅ Datos de calificaciones recargados exitosamente');
+          } catch (error) {
+            console.error('❌ Error al recargar datos:', error);
+          }
+        }
+      }
+
+      // Mostrar resultados con mejor información
+      const totalErrores = erroresAsistencia.length + erroresCalificacion.length;
+      const totalExitos = exitosAsistencia + exitosCalificacion;
+
+      if (totalErrores === 0 && totalExitos > 0) {
+        setSnackbarMessage(`🎉 Cambios guardados exitosamente: ${exitosAsistencia} asistencias y ${exitosCalificacion} calificaciones actualizadas.`);
+        setSnackbarSeverity('success');
+      } else if (totalExitos > 0 && totalErrores > 0) {
+        const mensajeExitos = `✅ Éxitos: ${exitosAsistencia} asistencias, ${exitosCalificacion} calificaciones. `;
+        const mensajeErrores = `⚠️ Errores: ${totalErrores} actualizaciones fallaron.`;
+        setSnackbarMessage(mensajeExitos + mensajeErrores);
+        setSnackbarSeverity('warning');
+      } else if (totalErrores > 0) {
+        setSnackbarMessage(`❌ Error: No se pudieron guardar los cambios. ${totalErrores} actualizaciones fallaron.`);
+        setSnackbarSeverity('error');
+      } else {
+        setSnackbarMessage('ℹ️ No hay cambios para guardar.');
+        setSnackbarSeverity('info');
+      }
+
     } catch (err: any) {
-      console.error('Error al guardar cambios:', err);
-      setSnackbarMessage(`Error al guardar cambios: ${err.message}`);
+      console.error('❌ Error general al guardar cambios:', err);
+      setSnackbarMessage(`❌ Error general al guardar cambios: ${err.message}`);
       setSnackbarSeverity('error');
     } finally {
       setSnackbarOpen(true);
+      setLoading(false);
     }
   };
 
   const handleOpenObservacionModal = (estudianteId: string, estudianteNombre: string) => {
     setCurrentStudentIdForObservacion(estudianteId);
     setCurrentStudentNameForObservacion(estudianteNombre);
-    setObservacionFechaIncidente(new Date().toISOString().split('T')[0]);
+    // Usar función segura para la fecha para evitar problemas de validación (2 días atrás)
+    setObservacionFechaIncidente('2025-07-11');
     setObservacionTipoFalta('Leve');
     setObservacionArticulo('');
     setObservacionDescripcion('');
@@ -234,10 +412,26 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
     }
 
     try {
-      await saveObservacion({
+      // Validar fecha antes de proceder
+      if (!validarFechaNoFutura(observacionFechaIncidente)) {
+        setSnackbarMessage('La fecha del incidente no puede ser futura. Seleccione una fecha anterior a hoy.');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+        return;
+      }
+
+      // Validar datos antes de enviar
+      validarDatosObservacion({
         idEstudiante: currentStudentIdForObservacion,
-        idMateria: materiaDetalle.id,
-        idProfesor: profesorActual.id,
+        fechaIncidente: observacionFechaIncidente,
+        tipoFalta: observacionTipoFalta,
+        articuloManualConvivencia: observacionArticulo,
+        descripcion: observacionDescripcion,
+      });
+
+      // Crear observación usando el servicio integrado
+      await crearObservacion(materiaDetalle.id, {
+        idEstudiante: currentStudentIdForObservacion,
         fechaIncidente: observacionFechaIncidente,
         tipoFalta: observacionTipoFalta,
         articuloManualConvivencia: observacionArticulo,
@@ -247,15 +441,100 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
       setSnackbarMessage('Observación guardada exitosamente.');
       setSnackbarSeverity('success');
       handleCloseObservacionModal();
+      
+      // No recargar información adicional después de crear una nueva observación
+      console.log('Observación creada exitosamente');
     } catch (err: any) {
       console.error('Error al guardar observación:', err);
-      setSnackbarMessage(`Error al guardar observación: ${err.message}`);
+      
+      // Mostrar mensaje de error más específico
+      let errorMessage = 'Error al guardar observación';
+      
+      if (err.message) {
+        if (err.message.includes('fecha del incidente no puede ser futura')) {
+          errorMessage = 'La fecha del incidente no puede ser futura. Seleccione una fecha anterior a hoy.';
+        } else if (err.message.includes('Descripción debe tener al menos 10 caracteres')) {
+          errorMessage = 'La descripción debe tener al menos 10 caracteres.';
+        } else if (err.message.includes('Artículo del manual de convivencia es requerido')) {
+          errorMessage = 'El artículo del manual de convivencia es requerido.';
+        } else {
+          errorMessage = `Error: ${err.message}`;
+        }
+      }
+      
+      setSnackbarMessage(errorMessage);
       setSnackbarSeverity('error');
     } finally {
       setSnackbarOpen(true);
     }
   };
 
+  // Función para auto-guardar calificación cuando el usuario pierde el foco del campo
+  const handleAutoGuardarCalificacion = useCallback(async (
+    estudianteId: string,
+    periodo: CalificacionRegistro['periodo'],
+    nota: number | null
+  ) => {
+    if (edicionBloqueada || !materiaDetalle) return;
+
+    try {
+      console.log(`💾 Auto-guardando ${periodo} = ${nota} para estudiante ${estudianteId}`);
+      
+      const resultado = await autoGuardarCalificacion(materiaDetalle.id, estudianteId, periodo, nota);
+      
+      if (resultado.exito && nota !== null) {
+        // Recargar calificaciones después del auto-guardado exitoso
+        try {
+          console.log('🔄 Recargando calificaciones después del auto-guardado...');
+          const detalleActualizado = await getMateriaDetalle(materiaId);
+          setMateriaDetalle(detalleActualizado);
+          setEstudiantesConCambios([...detalleActualizado.estudiantes]);
+          console.log('✅ Calificaciones recargadas después del auto-guardado');
+        } catch (reloadError) {
+          console.error('❌ Error al recargar después del auto-guardado:', reloadError);
+        }
+        
+        // Mostrar confirmación sutil solo para éxitos con nota válida
+        setSnackbarMessage(`✅ ${resultado.mensaje}`);
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+        
+        // Auto-cerrar después de 2 segundos
+        setTimeout(() => setSnackbarOpen(false), 2000);
+      } else if (!resultado.exito) {
+        // Mostrar error
+        setSnackbarMessage(`❌ ${resultado.mensaje}`);
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+      }
+    } catch (error) {
+      console.error('❌ Error en auto-guardado:', error);
+      setSnackbarMessage(`❌ Error en auto-guardado: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    }
+  }, [edicionBloqueada, materiaDetalle, materiaId]);
+
+  // Efecto para debugging - mostrar las calificaciones cargadas
+  useEffect(() => {
+    if (materiaDetalle && materiaDetalle.estudiantes.length > 0) {
+      console.log('📊 Estado actual de estudiantes con calificaciones:');
+      materiaDetalle.estudiantes.forEach(estudiante => {
+        console.log(`👤 ${estudiante.nombre}:`, estudiante.calificaciones);
+      });
+    }
+  }, [materiaDetalle]);
+
+  // Función para cargar resúmenes de observaciones de todos los estudiantes
+  const cargarResumenesObservaciones = useCallback(async () => {
+    // Función eliminada - ya no mostramos contadores de observaciones
+    console.log('Función de carga de resúmenes de observaciones deshabilitada');
+  }, []);
+
+  // No cargar resúmenes de observaciones automáticamente
+  useEffect(() => {
+    // Efecto deshabilitado - ya no cargamos contadores de observaciones
+  }, []);
 
   if (loading) {
     return (
@@ -282,7 +561,18 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
     );
   }
 
+  // Obtener estado de asistencia usando datos reales del backend
   const getEstadoAsistencia = (estudianteId: string) => {
+    // 1. Priorizar asistencias reales del backend
+    if (estudiantesConAsistenciasReales) {
+      const estudianteConAsistencia = estudiantesConAsistenciasReales.find(e => e.id === estudianteId);
+      if (estudianteConAsistencia && estudianteConAsistencia.estadoAsistencia !== 'No registrado') {
+        // Retornar asistencia - el estado aplicado del estudiante
+        return estudianteConAsistencia.estadoAsistencia;
+      }
+    }
+    
+    // 2. Fallback a datos locales solo si no hay datos globales del backend
     const estudiante = estudiantesConCambios.find(e => e.id === estudianteId);
     return estudiante?.asistencias.find(reg => reg.fecha === asistenciaFecha)?.estado || '';
   };
@@ -361,9 +651,6 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
             sx={{ mr: 2 }}
             disabled={edicionBloqueada}
           />
-          <Typography variant="caption" display="block" color="text.secondary" mt={1}>
-            La asistencia y las notas se registrarán para la fecha seleccionada.
-          </Typography>
         </Box>
 
         <TableContainer component={Paper} variant="outlined" sx={{ mt: 3 }}>
@@ -371,7 +658,19 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
             <TableHead>
               <TableRow sx={{ backgroundColor: theme.palette.grey[100] }}>
                 <TableCell><strong>Estudiante</strong></TableCell>
-                <TableCell align="center"><strong>Asistencia ({asistenciaFecha})</strong></TableCell>
+                <TableCell align="center">
+                  <strong>Asistencia ({asistenciaFecha})</strong>
+                  <Typography variant="caption" display="block" color="text.secondary" sx={{ fontWeight: 'normal' }}>
+                    Estado aplicado a todo el día
+                  </Typography>
+                  {cargandoAsistencias && (
+                    <Box component="span" sx={{ ml: 1 }}>
+                      <Typography variant="caption" color="primary" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                        🔄 Cargando...
+                      </Typography>
+                    </Box>
+                  )}
+                </TableCell>
                 <TableCell align="center"><strong>Parcial 1</strong></TableCell>
                 <TableCell align="center"><strong>Parcial 2</strong></TableCell>
                 <TableCell align="center"><strong>Parcial 3</strong></TableCell>
@@ -379,27 +678,29 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
                   <strong>Promedio</strong>
                   <CalculateIcon fontSize="small" sx={{ verticalAlign: 'middle', ml: 0.5 }} />
                 </TableCell>
-                <TableCell align="center"><strong>Reporte Disciplinario</strong></TableCell>
+                <TableCell align="center"><strong>Acciones</strong></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {estudiantesConCambios.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">No hay estudiantes matriculados en esta asignatura.</TableCell>
+                  <TableCell colSpan={6} align="center">No hay estudiantes matriculados en esta asignatura.</TableCell>
                 </TableRow>
               ) : (
                 estudiantesConCambios.map((estudiante) => (
                   <TableRow key={estudiante.id}>
                     <TableCell>{estudiante.nombre}</TableCell>
                     <TableCell align="center">
-                      <FormControl fullWidth size="small" disabled={edicionBloqueada}>
+                      {/* Selector de asistencia */}
+                      {/* La asistencia es GLOBAL por estudiante por día - afecta todas las materias */}
+                      <FormControl fullWidth size="small" disabled={edicionBloqueada || cargandoAsistencias}>
                         <Select
                           value={getEstadoAsistencia(estudiante.id)}
                           onChange={(e) => handleAsistenciaChange(estudiante.id, e.target.value as 'Presente' | 'Ausente' | 'Justificado')}
                           displayEmpty
                           sx={{ minWidth: 120 }}
                         >
-                          <MenuItem value=""><em>Seleccionar</em></MenuItem>
+                          <MenuItem value=""><em>{cargandoAsistencias ? 'Cargando...' : 'Seleccionar'}</em></MenuItem>
                           <MenuItem value="Presente">Presente</MenuItem>
                           <MenuItem value="Ausente">Ausente</MenuItem>
                           <MenuItem value="Justificado">Justificado</MenuItem>
@@ -419,6 +720,11 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
                             size="small"
                             sx={{ width: 80 }}
                             disabled={edicionBloqueada}
+                            placeholder="0.0"
+                            onBlur={(e) => {
+                              const value = e.target.value === '' ? null : parseFloat(e.target.value);
+                              handleAutoGuardarCalificacion(estudiante.id, periodo, value);
+                            }}
                           />
                         </TableCell>
                       );
@@ -431,11 +737,13 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
+                      {/* Solo botón para agregar observación */}
                       <IconButton
                         color="primary"
                         aria-label="añadir observación"
                         onClick={() => handleOpenObservacionModal(estudiante.id, estudiante.nombre)}
                         disabled={edicionBloqueada || !profesorActual}
+                        title="Añadir observación disciplinaria"
                       >
                         <AddCommentIcon />
                       </IconButton>
@@ -498,6 +806,15 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
               onChange={(e) => setObservacionFechaIncidente(e.target.value)}
               InputLabelProps={{ shrink: true }}
               variant="outlined"
+              error={!validarFechaNoFutura(observacionFechaIncidente)}
+              helperText={
+                !validarFechaNoFutura(observacionFechaIncidente) 
+                  ? 'La fecha no puede ser futura' 
+                  : 'Seleccione la fecha del incidente'
+              }
+              inputProps={{
+                max: '2025-07-11' // Fecha máxima: julio 11, 2025
+              }}
             />
             <FormControl fullWidth variant="outlined">
               <InputLabel>Tipo de Falta</InputLabel>

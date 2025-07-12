@@ -76,7 +76,7 @@ export async function fetchNavItems(): Promise<NavItem[]> {
 
     return items;
   } catch (e) {
-    console.warn('fetchNavItems falló, usando menú de prueba →', (e as Error).message);
+    // fetchNavItems falló, usando menú de prueba
     return items;
   }
 }
@@ -102,7 +102,7 @@ async function fetchSedes(profesorId: number): Promise<Sede[]> {
       direccion: sede.direccion || ''
     }));
   } catch (e) {
-    console.error('Error cargando sedes reales:', e);
+    throw new Error('Error cargando sedes: ' + (e as Error).message);
     return [
       { id: 'sede1', nombre: 'Sede Norte' },
       { id: 'sede2', nombre: 'Sede Sur' }
@@ -131,7 +131,7 @@ async function fetchCursosDelProfesor(profesorId: number): Promise<CursoConSede[
       sede: { id: curso.id_sede.toString(), nombre: '' } // opcional, se puede completar si se desea
     }));
   } catch (e) {
-    console.error('Error cargando cursos del profesor:', e);
+    throw new Error('Error cargando cursos del profesor: ' + (e as Error).message);
     return [];
   }
 }

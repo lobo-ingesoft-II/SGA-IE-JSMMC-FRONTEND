@@ -27,7 +27,7 @@ async function getMateriasByCursoAndProfesor(
   nombreProfesor: string = 'Sin asignar'
 ): Promise<Materia[]> {
   try {
-    console.log(`🔍 Obteniendo materias para curso ${cursoId} y profesor ${profesorId}`);
+    // Obteniendo materias para curso y profesor
     
     // Primero intentamos obtener las asignaciones con IDs completos
     let asignacionesConIds: AsignacionResponse[] = [];
@@ -38,10 +38,10 @@ async function getMateriasByCursoAndProfesor(
         const todasAsignaciones = await asignacionesResponse.json();
         // Filtrar por curso específico
         asignacionesConIds = todasAsignaciones.filter((a: AsignacionResponse) => a.id_curso === cursoId);
-        console.log('📋 Asignaciones con IDs encontradas:', asignacionesConIds);
+        // Asignaciones con IDs encontradas
       }
     } catch (error) {
-      console.warn('⚠️ No se pudieron obtener asignaciones con IDs, usando método alternativo');
+      // No se pudieron obtener asignaciones con IDs, usando método alternativo
     }
     
     // Si tenemos asignaciones con IDs, usarlas
@@ -78,7 +78,7 @@ async function getMateriasByCursoAndProfesor(
         });
       }
       
-      console.log('✅ Materias con IDs correctos:', materiasConIds);
+      // Materias con IDs correctos encontradas
       return materiasConIds;
     }
     
@@ -88,23 +88,23 @@ async function getMateriasByCursoAndProfesor(
     );
     
     if (!response.ok) {
-      console.error(`❌ Error en API: ${response.status} ${response.statusText}`);
+      throw new Error(`Error en API: ${response.status} ${response.statusText}`);
       return [];
     }
     
     const responseData = await response.json();
-    console.log('📦 Respuesta de la API (fallback):', responseData);
+    // Respuesta de la API (fallback)
     
     // Verificar si la respuesta es un array o un objeto único
     if (Array.isArray(responseData)) {
-      console.log('📋 Procesando múltiples asignaturas (fallback):', responseData.length);
+      // Procesando múltiples asignaturas (fallback)
       return responseData.map((asignaturaData: { nombre: string }, index: number) => ({
         id: `fallback_${cursoId}_${index + 1}`, // ID temporal que incluye el curso
         nombre: asignaturaData.nombre,
         docente: nombreProfesor
       }));
     } else {
-      console.log('📄 Procesando una sola asignatura (fallback):', responseData.nombre);
+      // Procesando una sola asignatura (fallback)
       const asignaturaData: { nombre: string } = responseData;
       return [{
         id: `fallback_${cursoId}_1`, // ID temporal que incluye el curso
@@ -113,7 +113,7 @@ async function getMateriasByCursoAndProfesor(
       }];
     }
   } catch (error) {
-    console.error('❌ Error al obtener materias:', error);
+    throw error;
     return [];
   }
 }
@@ -124,7 +124,7 @@ export async function getSedeAndCursos(
   // Obtener datos del usuario
   const userDataString = localStorage.getItem('user');
   if (!userDataString) {
-    console.error('❌ No se encontraron datos de usuario en localStorage');
+    throw new Error('No se encontraron datos de usuario en localStorage');
     return {
       sede: { id: sedeId, nombre: 'Sede desconocida' },
       cursos: []
@@ -135,7 +135,7 @@ export async function getSedeAndCursos(
   const profesorId = userData.id_profesor;
 
   if (!profesorId) {
-    console.error('❌ No se encontró ID de profesor en userData');
+    throw new Error('No se encontró ID de profesor en userData');
     return {
       sede: { id: sedeId, nombre: 'Sede desconocida' },
       cursos: []
@@ -159,7 +159,7 @@ export async function getSedeAndCursos(
       nombre: sedeRaw.nombre
     };
   } catch (error: any) {
-    console.error('❌ Error al obtener la sede:', error.message);
+    throw new Error('Error al obtener la sede: ' + error.message);
     return {
       sede: {
         id: sedeId,
@@ -171,7 +171,7 @@ export async function getSedeAndCursos(
 
   // 2. Obtener cursos del profesor autenticado
   try {
-    const cursosRes = await fetch(`http://127.0.0.1:8004/cursos/profesores/${profesorId}/cursos`, {
+    const cursosRes = await fetch(`http://localhost:8004/cursos/profesores/${profesorId}/cursos`, {
       method: 'GET',
       headers: { 
         'Content-Type': 'application/json',
@@ -217,7 +217,7 @@ export async function getSedeAndCursos(
 
     return { sede, cursos: cursosConMaterias };
   } catch (error: any) {
-    console.error('❌ Error al obtener cursos:', error.message);
+    throw new Error('Error al obtener cursos: ' + error.message);
     return {
       sede,
       cursos: []

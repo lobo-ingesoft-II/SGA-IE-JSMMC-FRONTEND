@@ -24,8 +24,9 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { getCursoById } from '../../../../../../services/PanelProfesor/cursoService';
+import { getCursoById, getEstudiantesPorCurso } from '../../../../../../services/PanelProfesor/cursoService';
 import type { Curso } from '../../../../../../models/PanelProfesor/curso';
+import type { Estudiante } from '../../../../../../models/PanelProfesor/estudiante';
 
 const VistaCursos = () => {
   const theme = useTheme();
@@ -35,18 +36,8 @@ const VistaCursos = () => {
   const [curso, setCurso] = useState<Curso | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [estudiantes, setEstudiantes] = useState<any[]>([]);
+  const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
   const [loadingEstudiantes, setLoadingEstudiantes] = useState(false);
-
-  // Datos fake para estudiantes
-  const fakeEstudiantes = [
-    { id: 'e1', nombre: 'Ana Torres', inasistencias: 3 },
-    { id: 'e2', nombre: 'Luis Pérez', inasistencias: 1 },
-    { id: 'e3', nombre: 'Carlos Sánchez', inasistencias: 0 },
-    { id: 'e4', nombre: 'María Gómez', inasistencias: 2 },
-    { id: 'e5', nombre: 'Juan Rodríguez', inasistencias: 5 },
-    { id: 'e6', nombre: 'Sofía Vargas', inasistencias: 1 }
-  ];
 
   useEffect(() => {
     async function fetchCurso() {
@@ -62,13 +53,18 @@ const VistaCursos = () => {
         const cursoData = await getCursoById(cursoId);
         setCurso(cursoData);
         
-        // Simular carga de estudiantes
+        // Cargar estudiantes usando directamente el ID del curso
         setLoadingEstudiantes(true);
         
-        setTimeout(() => {
-          setEstudiantes(fakeEstudiantes);
+        try {
+          const estudiantesData = await getEstudiantesPorCurso(cursoId);
+          setEstudiantes(estudiantesData);
+        } catch (estudiantesError: any) {
+          console.error('Error al cargar estudiantes:', estudiantesError);
+          setEstudiantes([]);
+        } finally {
           setLoadingEstudiantes(false);
-        }, 800);
+        }
         
       } catch (err: any) {
         setError(`Error al cargar el curso: ${err.message}`);
@@ -303,64 +299,86 @@ const VistaCursos = () => {
           }}>
             <PeopleIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
             Estudiantes del curso
+            {estudiantes.length > 0 && (
+              <Chip 
+                label={`${estudiantes.length} estudiante${estudiantes.length !== 1 ? 's' : ''}`}
+                size="small"
+                color="primary"
+                variant="outlined"
+                sx={{ ml: 2 }}
+              />
+            )}
           </Typography>
 
           {loadingEstudiantes ? (
             <Box display="flex" justifyContent="center" py={4}>
               <CircularProgress />
-            </Box>
-          ) : estudiantes.length === 0 ? (
-            <Box sx={{ 
-              p: 3, 
-              backgroundColor: theme.palette.grey[100], 
-              borderRadius: 2,
-              textAlign: 'center'
-            }}>
-              <Typography variant="body1" color="text.secondary">
-                No hay estudiantes asignados a este curso.
+              <Typography variant="body2" sx={{ ml: 2 }}>
+                Cargando estudiantes...
               </Typography>
             </Box>
           ) : (
-            <TableContainer 
-              component={Paper} 
-              variant="outlined"
-              sx={{ borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}
-            >
-              <Table>
-                <TableHead sx={{ backgroundColor: theme.palette.grey[100] }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 700, color: theme.palette.text.primary }}>#</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: theme.palette.text.primary }}>Nombre del estudiante</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 700, color: theme.palette.text.primary }}>Inasistencias</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {estudiantes.map((estudiante: any, index: number) => (
-                    <TableRow key={estudiante.id} hover>
-                      <TableCell sx={{ color: theme.palette.text.secondary }}>{index + 1}</TableCell>
-                      <TableCell>
-                        <Typography variant="body1">{estudiante.nombre}</Typography>
-                        <Typography variant="caption" color="textSecondary">
-                          ID: {estudiante.id}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip 
-                          label={estudiante.inasistencias} 
-                          size="small" 
-                          variant="outlined"
-                          color={estudiante.inasistencias > 5 ? 'error' : 'primary'}
-                          sx={{ 
-                            minWidth: 40,
-                            fontWeight: estudiante.inasistencias > 5 ? 700 : 500 
-                          }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <Box>
+              {estudiantes.length === 0 ? (
+                <Box sx={{ 
+                  p: 3, 
+                  backgroundColor: theme.palette.grey[100], 
+                  borderRadius: 2,
+                  textAlign: 'center'
+                }}>
+                  <Typography variant="body1" color="text.secondary" gutterBottom>
+                    No hay estudiantes matriculados en este curso.
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Los estudiantes se cargan automáticamente usando el ID del curso.
+                  </Typography>
+                </Box>
+              ) : (
+                <TableContainer 
+                  component={Paper} 
+                  variant="outlined"
+                  sx={{ borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}
+                >
+                  <Table>
+                    <TableHead sx={{ backgroundColor: theme.palette.grey[100] }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 700, color: theme.palette.text.primary }}>#</TableCell>
+                        <TableCell sx={{ fontWeight: 700, color: theme.palette.text.primary }}>Nombre del estudiante</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, color: theme.palette.text.primary }}>ID Estudiante</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, color: theme.palette.text.primary }}>Inasistencias</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {estudiantes.map((estudiante: Estudiante, index: number) => (
+                        <TableRow key={estudiante.id} hover>
+                          <TableCell sx={{ color: theme.palette.text.secondary }}>{index + 1}</TableCell>
+                          <TableCell>
+                            <Typography variant="body1" sx={{ fontWeight: 500 }}>{estudiante.nombre}</Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Typography variant="body2" color="textSecondary">
+                              {estudiante.id}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Chip 
+                              label={estudiante.inasistencias || 0} 
+                              size="small" 
+                              variant="outlined"
+                              color={estudiante.inasistencias > 5 ? 'error' : 'primary'}
+                              sx={{ 
+                                minWidth: 40,
+                                fontWeight: estudiante.inasistencias > 5 ? 700 : 500 
+                              }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Box>
           )}
         </Box>
       </Paper>

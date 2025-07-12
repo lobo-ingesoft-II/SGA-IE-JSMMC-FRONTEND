@@ -23,7 +23,7 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAdminInicioData, AdminInicioData } from '../../../services/PanelAdministrador/inicioService';
-import { useAuth } from '../../../context/authContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const Inicio: React.FC = () => {
   const theme = useTheme();
@@ -48,7 +48,7 @@ const Inicio: React.FC = () => {
         const data = await getAdminInicioData();
         setadminData(data);
       } catch (err: any) {
-        console.error('Error al cargar los datos del administrador:', err);
+        // Error al cargar los datos del administrador
         setError('No se pudo cargar la información del administrador.');
       } finally {
         setLoading(false);
