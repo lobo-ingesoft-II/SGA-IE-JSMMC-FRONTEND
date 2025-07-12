@@ -87,7 +87,7 @@ export async function getProfesorInicioData(): Promise<ProfesorInicioData> {
       docente: nombreCompletoProfesor
     }));
   } catch (error) {
-    console.error('Error al obtener materias asignadas:', error);
+    throw new Error('Error al obtener materias asignadas: ' + (error as Error).message);
     // Fallback a datos simulados solo en caso de error
     materiasAsignadas = [
       { id: 'm1', nombre: 'Error de carga', docente: 'Sistema' }

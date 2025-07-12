@@ -24,7 +24,7 @@ import {
 
 import { useNavigate, useParams } from 'react-router-dom';
 import { getProfesorInicioData, ProfesorInicioData } from '../../../services/PanelProfesor/inicioService';
-import { useAuth } from '../../../context/authContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const Inicio: React.FC = () => {
   const theme = useTheme();
@@ -50,7 +50,7 @@ const Inicio: React.FC = () => {
         const data = await getProfesorInicioData();
         setProfesorData(data);
       } catch (err: any) {
-        console.error('Error al cargar los datos del profesor:', err);
+        // Error al cargar los datos del profesor
         setError('No se pudo cargar la información del profesor.');
       } finally {
         setLoading(false);

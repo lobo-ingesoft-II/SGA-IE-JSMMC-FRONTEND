@@ -1,0 +1,195 @@
+// Servicio para gestión de asignaturas - VERSIÓN PRODUCCIÓN
+// Este servicio SOLO usa datos reales de la API, sin fallbacks a datos de prueba
+
+const API_BASE_URL = 'http://localhost';
+
+// Configuración de puertos para cada API
+const API_PORTS = {
+  asignaturas: 8001,
+  calificaciones: 8003,
+  cursos: 8004,
+  estudiantes: 8005,
+  asistencia: 8002,
+  observaciones: 8011,
+  sedes: 8000,
+  autenticacion: 8009
+};
+
+export interface Estudiante {
+  id: number;
+  nombre: string;
+  calificaciones: {
+    periodo: string;
+    nota: number | null;
+  }[];
+  promedio: number;
+  inasistencias: number;
+  edicionBloqueada: boolean;
+  observaciones?: string;
+}
+
+export interface MateriaDetalle {
+  id: number;
+  nombre: string;
+  docente: string;
+  curso: string;
+  estudiantes: Estudiante[];
+  periodo_actual: string;
+}
+
+// Función auxiliar para hacer requests con manejo de errores
+async function makeApiRequest<T>(url: string, options?: RequestInit): Promise<T> {
+  try {
+    console.log(`🌐 API Request: ${url}`);
+    
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(`✅ API Response from ${url}:`, data);
+    return data;
+  } catch (error) {
+    console.error(`❌ API Error for ${url}:`, error);
+    throw error;
+  }
+}
+
+// Obtener estudiantes con calificaciones de un curso específico
+export async function getEstudiantesConCalificaciones(cursoId: number): Promise<Estudiante[]> {
+  console.log(`📚 Obteniendo estudiantes con calificaciones para curso ${cursoId}`);
+  
+  const url = `${API_BASE_URL}:${API_PORTS.calificaciones}/calificaciones/estudiantes/${cursoId}/calificaciones`;
+  
+  try {
+    const estudiantes = await makeApiRequest<Estudiante[]>(url);
+    console.log(`✅ Se obtuvieron ${estudiantes.length} estudiantes con calificaciones reales`);
+    return estudiantes;
+  } catch (error) {
+    console.error('❌ Error al obtener estudiantes con calificaciones:', error);
+    throw new Error(`No se pudieron obtener los estudiantes del curso ${cursoId}. Verifique que la API de calificaciones esté disponible.`);
+  }
+}
+
+// Obtener detalles de una asignatura específica
+export async function getAsignaturaDetalle(asignaturaId: number): Promise<{ nombre: string; id_asignatura: number }> {
+  console.log(`📖 Obteniendo detalles de asignatura ${asignaturaId}`);
+  
+  const url = `${API_BASE_URL}:${API_PORTS.asignaturas}/asignaturas/${asignaturaId}`;
+  
+  try {
+    const asignatura = await makeApiRequest<{ nombre: string; id_asignatura: number }>(url);
+    console.log(`✅ Detalles de asignatura obtenidos:`, asignatura);
+    return asignatura;
+  } catch (error) {
+    console.error('❌ Error al obtener detalles de asignatura:', error);
+    throw new Error(`No se pudieron obtener los detalles de la asignatura ${asignaturaId}. Verifique que la API de asignaturas esté disponible.`);
+  }
+}
+
+// Obtener detalles de un curso específico
+export async function getCursoDetalle(cursoId: number): Promise<{ nombre: string; grado: string; id_curso: number }> {
+  console.log(`🏫 Obteniendo detalles de curso ${cursoId}`);
+  
+  const url = `${API_BASE_URL}:${API_PORTS.cursos}/cursos/${cursoId}`;
+  
+  try {
+    const curso = await makeApiRequest<{ nombre: string; grado: string; id_curso: number }>(url);
+    console.log(`✅ Detalles de curso obtenidos:`, curso);
+    return curso;
+  } catch (error) {
+    console.error('❌ Error al obtener detalles de curso:', error);
+    throw new Error(`No se pudieron obtener los detalles del curso ${cursoId}. Verifique que la API de cursos esté disponible.`);
+  }
+}
+
+// Función principal para obtener todos los detalles de una materia
+export async function getMateriaDetalle(asignaturaId: number, cursoId: number): Promise<MateriaDetalle> {
+  console.log(`🎯 INICIO - Obteniendo detalles completos para asignatura ${asignaturaId} en curso ${cursoId}`);
+  
+  try {
+    // Hacer todas las requests en paralelo para mejor rendimiento
+    const [asignatura, curso, estudiantes] = await Promise.all([
+      getAsignaturaDetalle(asignaturaId),
+      getCursoDetalle(cursoId),
+      getEstudiantesConCalificaciones(cursoId)
+    ]);
+
+    const materiaDetalle: MateriaDetalle = {
+      id: asignaturaId,
+      nombre: asignatura.nombre,
+      docente: "Prof. Rodriguez", // TODO: Obtener del API de autenticación/usuarios
+      curso: `${curso.grado} - ${curso.nombre}`,
+      estudiantes: estudiantes,
+      periodo_actual: "parcial1" // TODO: Obtener del sistema de configuración
+    };
+
+    console.log(`✅ ÉXITO - Detalles completos obtenidos:`, materiaDetalle);
+    return materiaDetalle;
+
+  } catch (error) {
+    console.error('❌ ERROR CRÍTICO - No se pudieron obtener los detalles de la materia:', error);
+    throw error;
+  }
+}
+
+// Actualizar calificación de un estudiante
+export async function updateCalificacion(
+  estudianteId: number,
+  cursoId: number,
+  periodo: string,
+  nota: number
+): Promise<void> {
+  console.log(`📝 Actualizando calificación: Estudiante ${estudianteId}, Curso ${cursoId}, Periodo ${periodo}, Nota ${nota}`);
+  
+  const url = `${API_BASE_URL}:${API_PORTS.calificaciones}/calificaciones/estudiante/${estudianteId}/curso/${cursoId}`;
+  
+  try {
+    await makeApiRequest(url, {
+      method: 'PUT',
+      body: JSON.stringify({
+        periodo: periodo,
+        nota: nota
+      })
+    });
+    
+    console.log(`✅ Calificación actualizada exitosamente`);
+  } catch (error) {
+    console.error('❌ Error al actualizar calificación:', error);
+    throw new Error(`No se pudo actualizar la calificación. Error: ${error}`);
+  }
+}
+
+// Función para verificar el estado de todas las APIs
+export async function verificarEstadoAPIs(): Promise<{ [key: string]: boolean }> {
+  console.log('🔍 Verificando estado de todas las APIs...');
+  
+  const estado: { [key: string]: boolean } = {};
+  
+  for (const [servicio, puerto] of Object.entries(API_PORTS)) {
+    try {
+      const response = await fetch(`${API_BASE_URL}:${puerto}/docs`);
+      estado[servicio] = response.ok;
+      console.log(`${estado[servicio] ? '✅' : '❌'} ${servicio} (puerto ${puerto}): ${estado[servicio] ? 'OK' : 'No disponible'}`);
+    } catch (error) {
+      estado[servicio] = false;
+      console.log(`❌ ${servicio} (puerto ${puerto}): No disponible`);
+    }
+  }
+  
+  return estado;
+}
+
+// Exportar constantes útiles
+export const PERIODOS = ['parcial1', 'parcial2', 'parcial3'] as const;
+export type Periodo = typeof PERIODOS[number];
+
+export { API_PORTS };

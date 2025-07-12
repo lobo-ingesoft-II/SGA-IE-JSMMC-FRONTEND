@@ -1,43 +1,85 @@
-import { Estudiante } from '../../models/PanelProfesor/estudiante';
+import { Estudiante, EstudianteAPI } from '../../models/PanelProfesor/estudiante';
+
+const API_ESTUDIANTES = 'http://localhost:8005';
 
 /**
- * Esta función obtiene la lista de estudiantes asignados a un curso específico.
- *
- * El frontend espera que el backend exponga un endpoint con la siguiente forma:
+ * Obtiene estudiantes por ID de curso
+ * Usa el endpoint principal por_curso y fallback por_asignatura
+ */
+export const getEstudiantesPorCurso = async (cursoId: string | number): Promise<Estudiante[]> => {
+  const id = typeof cursoId === 'string' ? cursoId : cursoId.toString();
+  
+  try {
+    // 1. Intentar primero con el endpoint por_curso (método principal)
+    const urlPorCurso = `${API_ESTUDIANTES}/estudiantes/por_curso/${id}`;
+    const respPorCurso = await fetch(urlPorCurso);
+    
+    if (respPorCurso.ok) {
+      const estudiantesAPI: EstudianteAPI[] = await respPorCurso.json();
+      
+      if (Array.isArray(estudiantesAPI) && estudiantesAPI.length > 0) {
+        return estudiantesAPI.map((estudiante, index) => ({
+          id: estudiante.id_estudiante?.toString() || `estudiante_${index}`,
+          nombre: `${estudiante.nombres || 'Sin nombre'} ${estudiante.apellidos || 'Sin apellido'}`.trim(),
+          inasistencias: 0
+        }));
+      }
+    }
+    
+    // 2. Fallback: intentar con el endpoint por_asignatura
+    const urlPorAsignatura = `${API_ESTUDIANTES}/estudiantes/por_asignatura/${id}`;
+    const response = await fetch(urlPorAsignatura);
+
+    if (!response.ok) {
+      throw new Error(`Error al obtener estudiantes: ${response.status} ${response.statusText}`);
+    }
+
+    const estudiantesAPI: EstudianteAPI[] = await response.json();
+    
+    if (!Array.isArray(estudiantesAPI)) {
+      return [];
+    }
+    
+    // Transformar la respuesta de la API al formato esperado por el frontend
+    return estudiantesAPI.map((estudiante, index) => ({
+      id: estudiante.id_estudiante?.toString() || `estudiante_${index}`,
+      nombre: `${estudiante.nombres || 'Sin nombre'} ${estudiante.apellidos || 'Sin apellido'}`.trim(),
+      inasistencias: 0
+    }));
+    
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Obtiene estudiantes por ID de asignatura.
  * 
- *   GET /cursos/{cursoId}/estudiantes
- * 
- * Donde `{cursoId}` es el ID único del curso seleccionado.
- * 
- * El backend debe devolver un arreglo de objetos `Estudiante`, con la siguiente forma mínima esperada:
- * 
- * [
- *   {
- *     id: "e1",
- *     nombre: "Juan Pérez",
- *     inasistencias: 3
- *   },
- *   ...
- * ]
- * 
- * Esta información se utiliza en el frontend para mostrar una tabla con los nombres de los estudiantes
- * y su número de inasistencias.
- *
- * Si la respuesta del backend no es exitosa (por ejemplo, error 404 o 500),
- * se lanza una excepción para que la interfaz pueda mostrar un mensaje de error al usuario.
- *
- * @param cursoId ID del curso del cual se quieren obtener los estudiantes.
+ * @param asignaturaId ID de la asignatura para obtener los estudiantes
  * @returns Una promesa que resuelve a un arreglo de estudiantes.
  * @throws Error si el servidor responde con un estado distinto de 200 OK.
  */
-export const getEstudiantesPorCurso = async (cursoId: string): Promise<Estudiante[]> => {
-  const response = await fetch(`/cursos/${cursoId}/estudiantes`);
+export const getEstudiantesPorAsignatura = async (asignaturaId: string | number): Promise<Estudiante[]> => {
+  const id = typeof asignaturaId === 'string' ? asignaturaId : asignaturaId.toString();
+  
+  try {
+    const response = await fetch(`${API_ESTUDIANTES}/estudiantes/por_asignatura/${id}`);
 
-  // Si hay algún problema con la respuesta del servidor, se lanza un error
-  if (!response.ok) {
-    throw new Error('Error al obtener estudiantes');
+    if (!response.ok) {
+      throw new Error(`Error al obtener estudiantes: ${response.status} ${response.statusText}`);
+    }
+
+    const estudiantesAPI: EstudianteAPI[] = await response.json();
+    
+    // Transformar la respuesta de la API al formato esperado por el frontend
+    return estudiantesAPI.map((estudiante) => ({
+      id: estudiante.id_estudiante.toString(),
+      nombre: `${estudiante.nombres} ${estudiante.apellidos}`,
+      inasistencias: 0 // Por defecto 0, ya que la API no devuelve este campo
+    }));
+  } catch (error) {
+    throw error;
   }
-
-  // Si la respuesta fue exitosa, convertimos el JSON a un arreglo de estudiantes
-  return await response.json();
 };
+
+
