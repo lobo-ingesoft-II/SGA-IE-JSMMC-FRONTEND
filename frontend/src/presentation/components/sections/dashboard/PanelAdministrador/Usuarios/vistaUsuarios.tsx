@@ -467,8 +467,16 @@ const VistaUsuarios = () => {
             <InputLabel>Es Director</InputLabel>
             <Select
               name="datos_adicionales.es_director"
-              value={formData.datos_adicionales?.es_director || false}
-              onChange={handleFormChange}
+              value={formData.datos_adicionales?.es_director === true}
+              onChange={(e) => {
+                setFormData(prev => ({
+                  ...prev,
+                  datos_adicionales: {
+                    ...prev.datos_adicionales,
+                    es_director: e.target.value === "true"
+                  }
+                }));
+              }}
             >
               <MenuItem value="true">Sí</MenuItem>
               <MenuItem value="false">No</MenuItem>
