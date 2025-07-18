@@ -10,27 +10,53 @@ import {
 } from "@mui/material";
 import IconifyIcon from "../../../components/base/IconifyIcon";
 import { MouseEvent, useState, useEffect } from "react";
-import { getAdminInicioData } from "../../../../services/PanelAdministrador/inicioService";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../context/authContext";
 
 const AccountDropdown = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [nombre, setNombre] = useState("Usuario");
+  const [nombreCompleto, setNombreCompleto] = useState("Usuario");
   const open = Boolean(anchorEl);
 
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await getAdminInicioData();
-        if (data?.nombre) setNombre(data.nombre);
-      } catch (err) {
-        console.error("Error al cargar el nombre del profesor:", err);
+    try {
+      const userData = localStorage.getItem('user');
+      
+      if (userData) {
+        const userInfo = JSON.parse(userData);
+        
+        // Prioridad 1: usar el campo 'name' que ya viene formateado desde el login
+        if (userInfo.name && userInfo.name !== "Nombre no disponible") {
+          setNombreCompleto(userInfo.name);
+        }
+        // Prioridad 2: nombres y apellidos (por si acaso)
+        else if (userInfo.nombres && userInfo.apellidos) {
+          const nombreCompleto = `${userInfo.nombres} ${userInfo.apellidos}`;
+          setNombreCompleto(nombreCompleto);
+        } 
+        // Prioridad 3: solo nombres
+        else if (userInfo.nombres) {
+          setNombreCompleto(userInfo.nombres);
+        } 
+        // Prioridad 4: usar email como fallback
+        else if (userInfo.email) {
+          const emailName = userInfo.email.split('@')[0].replace(/\./g, ' ');
+          const formattedName = emailName.split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+          setNombreCompleto(formattedName);
+        }
+        else {
+          setNombreCompleto("Usuario");
+        }
       }
-    })();
+    } catch (err) {
+      console.error("Error al cargar el nombre del usuario:", err);
+      setNombreCompleto("Usuario");
+    }
   }, []);
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
@@ -82,7 +108,7 @@ const AccountDropdown = () => {
           py: 0.625,
         }}
       >
-        <Tooltip title={nombre} placement="top" arrow>
+        <Tooltip title={nombreCompleto} placement="top" arrow>
           <Avatar sx={{ width: 45, height: 45, bgcolor: "primary.main" }}>
             <IconifyIcon icon="mdi:account" width={24} height={24} color="white" />
           </Avatar>
@@ -92,7 +118,7 @@ const AccountDropdown = () => {
           color="text.primary"
           display={{ xs: "none", sm: "block" }}
         >
-          {nombre}
+          {nombreCompleto}
         </Typography>
         <IconifyIcon
           icon="ion:caret-down-outline"

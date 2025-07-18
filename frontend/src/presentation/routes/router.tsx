@@ -83,6 +83,18 @@ const VistaAsignatura = lazy(() =>
     new Promise((resolve) => setTimeout(resolve, 500)),
   ]).then(([moduleExports]) => moduleExports)
 );
+const PanelAdminSedes = lazy(() =>
+  Promise.all([
+    import('../pages/PanelAdministrador/Sedes'),
+    new Promise((resolve) => setTimeout(resolve, 500)),
+  ]).then(([moduleExports]) => moduleExports)
+);
+const PanelAdminUsuarios = lazy(() =>
+  Promise.all([
+    import('../pages/PanelAdministrador/Usuarios'),
+    new Promise((resolve) => setTimeout(resolve, 500)),
+  ]).then(([moduleExports]) => moduleExports)
+);
 
 const routes: RouteObject[] = [
   {
@@ -145,6 +157,14 @@ const routes: RouteObject[] = [
           {
             path: ':inicioId/Inicio',
             element: <PanelAdminInicio />,
+          },
+          {
+            path: ':inicioId/Sedes/:sedeId',
+            element: <PanelAdminSedes />,
+          },
+          {
+            path: ':inicioId/Usuarios',
+            element: <PanelAdminUsuarios />,
           },
         ],
       },
