@@ -15,7 +15,7 @@ import Image from '../../../components/base/Image';
 import NavButton from './NavButton';
 
 import { NavItem } from '../../../../helpers/navItem';
-import { fetchNavItems } from '../../../../services/PanelProfesor/navService';
+import { fetchNavItems, TEST_IDS } from '../../../../services/PanelProfesor/navService';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../context/authContext'; // Asegúrate que esta ruta sea correcta
 
@@ -26,23 +26,50 @@ import { useAuth } from '../../../../context/authContext'; // Asegúrate que est
  * la llamada, fetchNavItems() retornará un menú de prueba.
  */
 
+// Constantes para testing
+export const SIDEBAR_TEST_IDS = {
+  sidebar: 'sidebar-container',
+  logo: 'sidebar-logo',
+  navList: 'sidebar-nav-list',
+  logoutButton: 'sidebar-logout-button'
+};
+
 const Sidebar = (): ReactElement => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [navItems, setNavItems] = useState<NavItem[]>([]);
 
   useEffect(() => {
-    fetchNavItems()
+    // Verificar si estamos en modo de prueba (URL con param test=true)
+    const urlParams = new URLSearchParams(window.location.search);
+    const isTestMode = urlParams.get('test') === 'true';
+    
+    fetchNavItems(isTestMode)
       .then((items) => {
         setNavItems(items);
+        
+        // Exponer datos para testing
+        if (isTestMode && typeof window !== 'undefined') {
+          // @ts-ignore - Ignorar error de TypeScript
+          window.sidebarNavItems = items;
+        }
       })
       .catch((err) => {
         console.error('Error cargando navItems:', err);
       });
+      
+    // Limpiar al desmontar
+    return () => {
+      if (typeof window !== 'undefined' && 'sidebarNavItems' in window) {
+        // @ts-ignore - Ignorar error de TypeScript
+        delete window.sidebarNavItems;
+      }
+    };
   }, []);
 
   return (
     <Stack
+      data-testid={SIDEBAR_TEST_IDS.sidebar}
       justifyContent="flex-start"
       bgcolor="background.paper"
       height={1}
@@ -59,6 +86,7 @@ const Sidebar = (): ReactElement => {
     >
       {/* Logo que direcciona a “/” */}
       <Link
+        data-testid={SIDEBAR_TEST_IDS.logo}
         href="/"
         sx={{
           display: 'block',
@@ -97,6 +125,7 @@ const Sidebar = (): ReactElement => {
       >
         {/* Lista principal de NavButtons */}
         <List
+          data-testid={SIDEBAR_TEST_IDS.navList}
           sx={{
             mx: 2.5,
             py: 1.25,
@@ -105,7 +134,12 @@ const Sidebar = (): ReactElement => {
           }}
         >
           {navItems.map((navItem, index) => (
-            <NavButton key={index} navItem={navItem} Link={Link} />
+            <NavButton 
+              key={index} 
+              navItem={navItem} 
+              Link={Link} 
+              data-testid={navItem.testId || `nav-item-${index}`}
+            />
           ))}
         </List>
 
@@ -113,6 +147,7 @@ const Sidebar = (): ReactElement => {
         <List sx={{ mx: 2.5 }}>
           <ListItem sx={{ mx: 0, my: 2.5 }}>
             <ListItemButton
+              data-testid={SIDEBAR_TEST_IDS.logoutButton}
               onClick={async () => {
                 const token = localStorage.getItem('token');
                 try {

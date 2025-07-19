@@ -6,6 +6,43 @@ import { Observacion } from '../../models/PanelProfesor/observacion';
 
 const API_OBSERVACIONES_URL = 'http://localhost:8011';
 
+// Constantes para testing
+export const TEST_IDS = {
+  observacionItem: (id: string) => `observacion-${id}`,
+  observacionFecha: (id: string) => `observacion-fecha-${id}`,
+  observacionTipo: (id: string) => `observacion-tipo-${id}`,
+  observacionArticulo: (id: string) => `observacion-articulo-${id}`,
+  observacionDescripcion: (id: string) => `observacion-descripcion-${id}`
+};
+
+// Datos de prueba para testing
+export const TEST_DATA = {
+  observaciones: [
+    {
+      id: 'obs1',
+      idEstudiante: 'est1',
+      idMateria: 'materia1',
+      idProfesor: 'profesor1',
+      fechaIncidente: '2025-07-10',
+      tipoFalta: 'Leve' as const,
+      articuloManualConvivencia: 'Art. 25, Num. 3',
+      descripcion: 'Llegada tarde sin justificación en 2 ocasiones.',
+      fechaRegistro: '2025-07-11'
+    },
+    {
+      id: 'obs2',
+      idEstudiante: 'est1',
+      idMateria: 'materia1',
+      idProfesor: 'profesor1',
+      fechaIncidente: '2025-07-01',
+      tipoFalta: 'Grave' as const,
+      articuloManualConvivencia: 'Art. 30, Num. 5',
+      descripcion: 'Interrumpió la clase con uso inadecuado del celular.',
+      fechaRegistro: '2025-07-02'
+    }
+  ]
+};
+
 // =============================================================================
 // INTERFACES PARA LA API
 // =============================================================================
@@ -123,12 +160,23 @@ function convertirObservacionDeAPI(apiResponse: ObservacionAPIResponse): Observa
  * Guarda una nueva observación usando la API real
  * @param observacionData Los datos de la observación a guardar
  * @param idMateriaAsignacion ID de la asignación (se convertirá al ID de asignatura real)
+ * @param testMode Si es true, devuelve datos de prueba para testing
  * @returns Una promesa que resuelve con la observación guardada
  */
 export async function saveObservacion(
   observacionData: Omit<Observacion, 'id' | 'fechaRegistro'>,
-  idMateriaAsignacion?: string
+  idMateriaAsignacion?: string,
+  testMode: boolean = false
 ): Promise<Observacion> {
+  // Si estamos en modo test, devolver datos de prueba
+  if (testMode) {
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simular latencia
+    return {
+      ...observacionData,
+      id: `obs_test_${Date.now()}`,
+      fechaRegistro: new Date().toISOString().split('T')[0]
+    };
+  }
   try {
     console.log('[ObservacionService] Intentando guardar observación:', observacionData);
 
@@ -213,12 +261,21 @@ async function obtenerIdAsignaturaReal(idMateriaAsignacion: string): Promise<num
  * Obtiene el historial de observaciones para un estudiante y asignatura específica
  * @param idEstudiante ID del estudiante
  * @param idMateria ID de la materia/asignación
+ * @param testMode Si es true, devuelve datos de prueba para testing
  * @returns Una promesa que resuelve con un array de observaciones
  */
 export async function getObservacionesPorEstudianteYMateria(
   idEstudiante: string, 
-  idMateria: string
+  idMateria: string,
+  testMode: boolean = false
 ): Promise<Observacion[]> {
+  // Si estamos en modo test, devolver datos de prueba
+  if (testMode) {
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simular latencia
+    return TEST_DATA.observaciones.filter(obs => 
+      obs.idEstudiante === idEstudiante && obs.idMateria === idMateria
+    );
+  }
   try {
     console.log(`[ObservacionService] Solicitando historial de observaciones para Estudiante ${idEstudiante} en Materia ${idMateria}`);
     
