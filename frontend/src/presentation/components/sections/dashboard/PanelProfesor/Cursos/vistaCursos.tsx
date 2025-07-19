@@ -24,7 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { getCursoById, getEstudiantesPorCurso } from '../../../../../../services/PanelProfesor/cursoService';
+import { getCursoById, getEstudiantesPorCurso, TEST_IDS } from '../../../../../../services/PanelProfesor/cursoService';
 import type { Curso } from '../../../../../../models/PanelProfesor/curso';
 import type { Estudiante } from '../../../../../../models/PanelProfesor/estudiante';
 
@@ -49,16 +49,26 @@ const VistaCursos = () => {
           throw new Error("ID de curso no definido");
         }
         
+        // Verificar si estamos en modo de prueba (URL con param test=true)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isTestMode = urlParams.get('test') === 'true';
+        
         // Obtener el curso por ID (ya incluye las materias del endpoint)
-        const cursoData = await getCursoById(cursoId);
+        const cursoData = await getCursoById(cursoId, isTestMode);
         setCurso(cursoData);
         
         // Cargar estudiantes usando directamente el ID del curso
         setLoadingEstudiantes(true);
         
         try {
-          const estudiantesData = await getEstudiantesPorCurso(cursoId);
+          const estudiantesData = await getEstudiantesPorCurso(cursoId, isTestMode);
           setEstudiantes(estudiantesData);
+          
+          // Exponer datos para testing
+          if (isTestMode && typeof window !== 'undefined') {
+            // @ts-ignore - Ignorar error de TypeScript
+            window.cursoData = { curso: cursoData, estudiantes: estudiantesData };
+          }
         } catch (estudiantesError: any) {
           console.error('Error al cargar estudiantes:', estudiantesError);
           setEstudiantes([]);
@@ -75,6 +85,14 @@ const VistaCursos = () => {
     }
 
     fetchCurso();
+    
+    // Limpiar al desmontar
+    return () => {
+      if (typeof window !== 'undefined' && 'cursoData' in window) {
+        // @ts-ignore - Ignorar error de TypeScript
+        delete window.cursoData;
+      }
+    };
   }, [cursoId]);
 
   const handleClickMateria = (materiaId: string) => {
@@ -92,7 +110,7 @@ const VistaCursos = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh" flexDirection="column">
+      <Box data-testid={TEST_IDS.loadingIndicator} display="flex" justifyContent="center" alignItems="center" minHeight="60vh" flexDirection="column">
         <CircularProgress size={60} thickness={4} sx={{ mb: 3 }} />
         <Typography variant="h6" color="textSecondary">Cargando curso...</Typography>
       </Box>
@@ -101,7 +119,7 @@ const VistaCursos = () => {
 
   if (error) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box data-testid={TEST_IDS.errorMessage} display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <Alert severity="error" sx={{ maxWidth: '80%' }}>
           <Typography variant="h6" gutterBottom>Error al cargar el curso</Typography>
           <Typography>{error}</Typography>
@@ -115,7 +133,7 @@ const VistaCursos = () => {
 
   if (!curso) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh" flexDirection="column">
+      <Box data-testid={TEST_IDS.emptyState} display="flex" justifyContent="center" alignItems="center" minHeight="60vh" flexDirection="column">
         <SchoolIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
         <Typography variant="h5" color="text.secondary" gutterBottom>
           Curso no encontrado
@@ -128,14 +146,14 @@ const VistaCursos = () => {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto' }}>
+    <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto' }} data-testid={TEST_IDS.curso(curso.id)}>
       <Typography variant="h4" component="h1" gutterBottom sx={{ 
         mb: 3, 
         display: 'flex', 
         alignItems: 'center',
         fontWeight: 600,
         color: theme.palette.primary.dark
-      }}>
+      }} data-testid={TEST_IDS.cursoHeader}>
         <SchoolIcon sx={{ fontSize: 36, mr: 2, color: theme.palette.primary.main }} />
         Grado {curso.grado}
       </Typography>
@@ -222,6 +240,7 @@ const VistaCursos = () => {
             </Box>
           ) : (
             <Box
+              data-testid={TEST_IDS.materiasList}
               sx={{
                 display: 'grid',
                 gridTemplateColumns: {
@@ -236,6 +255,10 @@ const VistaCursos = () => {
               {curso.materias.map((materia: any) => (
                 <Paper
                   key={materia.id}
+                  data-testid={TEST_IDS.materia(materia.id)}
+                  data-materia-id={materia.id}
+                  data-materia-nombre={materia.nombre}
+                  data-materia-docente={materia.docente}
                   elevation={2}
                   onClick={() => handleClickMateria(materia.id)}
                   sx={{
@@ -337,6 +360,7 @@ const VistaCursos = () => {
                 <TableContainer 
                   component={Paper} 
                   variant="outlined"
+                  data-testid={TEST_IDS.estudiantesTable}
                   sx={{ borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}
                 >
                   <Table>
@@ -350,7 +374,14 @@ const VistaCursos = () => {
                     </TableHead>
                     <TableBody>
                       {estudiantes.map((estudiante: Estudiante, index: number) => (
-                        <TableRow key={estudiante.id} hover>
+                        <TableRow 
+                          key={estudiante.id} 
+                          data-testid={TEST_IDS.estudiante(estudiante.id)}
+                          data-estudiante-id={estudiante.id}
+                          data-estudiante-nombre={estudiante.nombre}
+                          data-estudiante-inasistencias={estudiante.inasistencias}
+                          hover
+                        >
                           <TableCell sx={{ color: theme.palette.text.secondary }}>{index + 1}</TableCell>
                           <TableCell>
                             <Typography variant="body1" sx={{ fontWeight: 500 }}>{estudiante.nombre}</Typography>

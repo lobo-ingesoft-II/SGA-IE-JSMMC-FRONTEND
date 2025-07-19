@@ -6,6 +6,44 @@ import type { Materia } from '../../models/PanelProfesor/materia';
 import { getEstudiantesPorAsignatura as getEstudiantesAPI } from './estudianteService';
 import type { Estudiante } from '../../models/PanelProfesor/estudiante';
 
+// Constantes para testing
+export const TEST_IDS = {
+  curso: (id: string) => `curso-${id}`,
+  materia: (id: string) => `materia-${id}`,
+  estudiante: (id: string) => `estudiante-${id}`,
+  loadingIndicator: 'loading-indicator',
+  errorMessage: 'error-message',
+  emptyState: 'empty-state',
+  cursoHeader: 'curso-header',
+  materiasList: 'materias-list',
+  estudiantesList: 'estudiantes-list',
+  estudiantesTable: 'estudiantes-table'
+};
+
+// Datos de prueba para testing
+export const TEST_DATA = {
+  curso: {
+    id: 'curso1',
+    nombre: 'Curso 101',
+    grado: '10°',
+    anioLectivo: 2023,
+    sede: {
+      id: 'sede1',
+      nombre: 'Sede Principal Test'
+    },
+    materias: [
+      { id: 'materia1', nombre: 'Matemáticas', docente: 'Test Profesor' },
+      { id: 'materia2', nombre: 'Física', docente: 'Test Profesor' },
+      { id: 'materia3', nombre: 'Química', docente: 'Test Profesor' }
+    ]
+  },
+  estudiantes: [
+    { id: 'est1', nombre: 'Estudiante Test 1', inasistencias: 2 },
+    { id: 'est2', nombre: 'Estudiante Test 2', inasistencias: 0 },
+    { id: 'est3', nombre: 'Estudiante Test 3', inasistencias: 7 }
+  ]
+};
+
 const API_CURSOS       = 'http://localhost:8004';
 const API_SEDES        = 'http://localhost:8000';
 const API_ASIGNACIONES = 'http://localhost:8001';
@@ -128,10 +166,18 @@ async function getMateriasByCursoAndProfesor(
 /**
  * Obtiene un curso junto con su sede y sus materias
  * para el profesor logueado.
+ * @param idCurso ID del curso
+ * @param testMode Si es true, devuelve datos de prueba para testing
+ * @returns Información del curso
  */
 export async function getCursoById(
-  idCurso: string | number
+  idCurso: string | number,
+  testMode: boolean = false
 ): Promise<Curso> {
+  // Si estamos en modo test, devolver datos de prueba
+  if (testMode) {
+    return TEST_DATA.curso;
+  }
   const id = typeof idCurso === 'string' ? +idCurso : idCurso;
 
   // 1) Curso
@@ -179,10 +225,18 @@ export async function getCursoById(
 /**
  * Obtiene estudiantes de un curso específico con inasistencias reales de la API.
  * Usa el endpoint principal por_curso y fallback por_asignatura en puerto 8005
+ * @param cursoId ID del curso
+ * @param testMode Si es true, devuelve datos de prueba para testing
+ * @returns Lista de estudiantes con inasistencias
  */
 export async function getEstudiantesPorCurso(
-  cursoId: string | number
+  cursoId: string | number,
+  testMode: boolean = false
 ): Promise<Array<{ id: string; nombre: string; inasistencias: number }>> {
+  // Si estamos en modo test, devolver datos de prueba
+  if (testMode) {
+    return TEST_DATA.estudiantes;
+  }
   const id = typeof cursoId === 'string' ? cursoId : cursoId.toString();
   
   try {

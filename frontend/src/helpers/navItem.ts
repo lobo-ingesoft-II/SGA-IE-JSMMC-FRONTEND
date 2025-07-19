@@ -5,4 +5,5 @@ export interface NavItem {
   active: boolean;
   collapsible: boolean;
   sublist?: NavItem[];
+  testId?: string; // Identificador para pruebas
 }

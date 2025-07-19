@@ -24,7 +24,25 @@ import {
 
 import { useNavigate, useParams } from 'react-router-dom';
 import { getProfesorInicioData, ProfesorInicioData } from '../../../services/PanelProfesor/inicioService';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../context/authContext';
+import testUtils from '../../../utils/testUtils';
+
+// Constantes para testing
+export const TEST_IDS = {
+  dashboardContainer: 'dashboard-container',
+  loadingIndicator: 'loading-indicator',
+  errorMessage: 'error-message',
+  emptyDataMessage: 'empty-data-message',
+  welcomeMessage: 'welcome-message',
+  personalInfoSection: 'personal-info-section',
+  assignmentsSection: 'assignments-section',
+  sedesSection: 'sedes-section',
+  cursosSection: 'cursos-section',
+  materiasSection: 'materias-section',
+  sedeItem: (id: string) => `sede-item-${id}`,
+  cursoItem: (id: string) => `curso-item-${id}`,
+  materiaItem: (id: string) => `materia-item-${id}`
+};
 
 const Inicio: React.FC = () => {
   const theme = useTheme();
@@ -47,10 +65,15 @@ const Inicio: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getProfesorInicioData();
+        // Verificar si estamos en modo de prueba (URL con param test=true)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isTestMode = urlParams.get('test') === 'true';
+        
+        const data = await getProfesorInicioData(isTestMode);
         setProfesorData(data);
       } catch (err: any) {
         // Error al cargar los datos del profesor
+        console.error('Error al cargar datos del profesor:', err);
         setError('No se pudo cargar la información del profesor.');
       } finally {
         setLoading(false);
@@ -58,10 +81,26 @@ const Inicio: React.FC = () => {
     }
     fetchData();
   }, []);
+  
+  // Función auxiliar para testing - expone los datos del profesor
+  // Esta función puede ser accedida desde pruebas de Selenium
+  React.useEffect(() => {
+    if (profesorData) {
+      // Exponer datos para testing usando las utilidades
+      testUtils.exposeProfesorDashboardData(profesorData);
+    }
+    return () => {
+      // Limpiar al desmontar
+      if ('profesorDashboardData' in window) {
+        // @ts-ignore - Ignorar error de TypeScript ya que sabemos que existe
+        delete window.profesorDashboardData;
+      }
+    };
+  }, [profesorData]);
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box data-testid={TEST_IDS.loadingIndicator} display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <CircularProgress />
         <Typography variant="h6" sx={{ ml: 2 }}>
           Cargando información principal...
@@ -72,7 +111,7 @@ const Inicio: React.FC = () => {
 
   if (error) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box data-testid={TEST_IDS.errorMessage} display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <Typography variant="h6" color="error">
           {error}
         </Typography>
@@ -82,7 +121,7 @@ const Inicio: React.FC = () => {
 
   if (!profesorData) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box data-testid={TEST_IDS.emptyDataMessage} display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <Typography variant="h6" color="text.secondary">
           No hay datos de profesor disponibles.
         </Typography>
@@ -91,8 +130,8 @@ const Inicio: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3, width: '100%' }}>
-      <Typography variant="h5" component="h1" gutterBottom sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
+    <Box data-testid={TEST_IDS.dashboardContainer} sx={{ p: 3, width: '100%' }}>
+      <Typography data-testid={TEST_IDS.welcomeMessage} variant="h5" component="h1" gutterBottom sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
         <DashboardIcon sx={{ mr: 1 }} />
         Bienvenido al Panel de Docentes, {profesorData.nombre} {profesorData.apellidos}
       </Typography>
@@ -101,6 +140,7 @@ const Inicio: React.FC = () => {
         {/* Información Personal */}
         <Box sx={{ width: '100%', p: 1.5 }}>
           <Paper
+            data-testid={TEST_IDS.personalInfoSection}
             elevation={2}
             sx={{
               mb: 2,
@@ -145,6 +185,7 @@ const Inicio: React.FC = () => {
         {/* Asignaciones */}
         <Box sx={{ width: '100%', p: 1.5 }}>
           <Paper
+            data-testid={TEST_IDS.assignmentsSection}
             elevation={2}
             sx={{
               mb: 2,
@@ -163,11 +204,14 @@ const Inicio: React.FC = () => {
               <Typography variant="h6" sx={{ mt: 2, mb: 1, color: theme.palette.primary.main, fontWeight: 600 }}>
                 Sedes Asignadas:
               </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Stack data-testid={TEST_IDS.sedesSection} direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 {profesorData.sedesAsignadas.length > 0 ? (
                   profesorData.sedesAsignadas.map((sede) => (
                     <Chip
                       key={sede.id}
+                      data-testid={TEST_IDS.sedeItem(sede.id)}
+                      data-sede-id={sede.id}
+                      data-sede-nombre={sede.nombre}
                       icon={<LocationOnIcon />}
                       label={sede.nombre}
                       color="info"
@@ -195,11 +239,15 @@ const Inicio: React.FC = () => {
               <Typography variant="h6" sx={{ mt: 3, mb: 1, color: theme.palette.primary.main, fontWeight: 600 }}>
                 Cursos Asignados:
               </Typography>
-              <List dense disablePadding sx={{ backgroundColor: theme.palette.grey[50], borderRadius: 1, p: 1 }}>
+              <List data-testid={TEST_IDS.cursosSection} dense disablePadding sx={{ backgroundColor: theme.palette.grey[50], borderRadius: 1, p: 1 }}>
                 {profesorData.cursosAsignados.length > 0 ? (
                   profesorData.cursosAsignados.map((curso) => (
                     <ListItem 
                       key={curso.id} 
+                      data-testid={TEST_IDS.cursoItem(curso.id)}
+                      data-curso-id={curso.id}
+                      data-curso-nombre={curso.nombre}
+                      data-curso-grado={curso.grado}
                       disableGutters 
                       sx={{ 
                         px: 1, 
@@ -231,11 +279,15 @@ const Inicio: React.FC = () => {
               <Typography variant="h6" sx={{ mt: 3, mb: 1, color: theme.palette.primary.main, fontWeight: 600 }}>
                 Asignaturas Asignadas:
               </Typography>
-              <List dense disablePadding sx={{ backgroundColor: theme.palette.grey[50], borderRadius: 1, p: 1 }}>
+              <List data-testid={TEST_IDS.materiasSection} dense disablePadding sx={{ backgroundColor: theme.palette.grey[50], borderRadius: 1, p: 1 }}>
                 {profesorData.materiasAsignadas.length > 0 ? (
                   profesorData.materiasAsignadas.map((materia) => (
                     <ListItem 
                       key={materia.id} 
+                      data-testid={TEST_IDS.materiaItem(materia.id)}
+                      data-materia-id={materia.id}
+                      data-materia-nombre={materia.nombre}
+                      data-materia-docente={materia.docente}
                       disableGutters 
                       sx={{ 
                         px: 1, 

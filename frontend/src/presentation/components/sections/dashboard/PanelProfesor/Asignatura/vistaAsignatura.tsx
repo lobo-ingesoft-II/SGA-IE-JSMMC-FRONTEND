@@ -58,7 +58,9 @@ import {
   validarDatosObservacion,
   // Funciones auxiliares para fechas
   obtenerFechaSegura,
-  validarFechaNoFutura
+  validarFechaNoFutura,
+  // Constantes para testing
+  TEST_IDS
 } from '../../../../../../services/PanelProfesor/asignaturaService';
 
 interface VistaAsignaturaProps {
@@ -109,15 +111,29 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
       setLoading(true);
       setError(null);
       try {
-        const detalle = await getMateriaDetalle(materiaId);
+        // Verificar si estamos en modo de prueba (URL con param test=true)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isTestMode = urlParams.get('test') === 'true';
+        
+        const detalle = await getMateriaDetalle(materiaId, isTestMode);
         setMateriaDetalle(detalle);
         setEstudiantesConCambios([...detalle.estudiantes]);
 
-        const profesor = await getProfesorActual();
+        const profesor = await getProfesorActual(isTestMode);
         setProfesorActual(profesor);
 
-        const locked = await checkIfEditionIsLocked(materiaId, asistenciaFecha);
+        const locked = await checkIfEditionIsLocked(materiaId, asistenciaFecha, isTestMode);
         setEdicionBloqueada(locked);
+        
+        // Exponer datos para testing
+        if (isTestMode && typeof window !== 'undefined') {
+          // @ts-ignore - Ignorar error de TypeScript
+          window.asignaturaData = { 
+            materia: detalle, 
+            profesor,
+            edicionBloqueada: locked
+          };
+        }
 
       } catch (err: any) {
         setError(err.message || 'Error al cargar la información de la asignatura.');
@@ -126,6 +142,14 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
       }
     }
     fetchData();
+    
+    // Limpiar al desmontar
+    return () => {
+      if (typeof window !== 'undefined' && 'asignaturaData' in window) {
+        // @ts-ignore - Ignorar error de TypeScript
+        delete window.asignaturaData;
+      }
+    };
   }, [materiaId, asistenciaFecha]);
 
   // Función para cargar asistencias globales reales desde el backend cuando cambie la fecha
@@ -134,8 +158,12 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
     
     setCargandoAsistencias(true);
     try {
+      // Verificar si estamos en modo de prueba (URL con param test=true)
+      const urlParams = new URLSearchParams(window.location.search);
+      const isTestMode = urlParams.get('test') === 'true';
+      
       // Obtener asistencias globales de los estudiantes del curso para la fecha
-      const estudiantesConAsistencias = await getEstudiantesConAsistencias(materiaId, asistenciaFecha);
+      const estudiantesConAsistencias = await getEstudiantesConAsistencias(materiaId, asistenciaFecha, isTestMode);
       setEstudiantesConAsistenciasReales(estudiantesConAsistencias);
     } catch (error) {
       setSnackbarMessage('Error al cargar las asistencias globales del día seleccionado');
@@ -538,7 +566,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box data-testid={TEST_IDS.loadingIndicator} display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <CircularProgress />
         <Typography variant="h6" sx={{ ml: 2 }}>Cargando detalles de la asignatura...</Typography>
       </Box>
@@ -547,7 +575,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
 
   if (error) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box data-testid={TEST_IDS.errorMessage} display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <Typography variant="h6" color="error">{error}</Typography>
       </Box>
     );
@@ -555,7 +583,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
 
   if (!materiaDetalle) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box data-testid={TEST_IDS.emptyState} display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <Typography variant="h6" color="text.secondary">No se encontró la información de la asignatura.</Typography>
       </Box>
     );
@@ -578,18 +606,22 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 2 }}>
+    <Box sx={{ p: 3 }} data-testid={TEST_IDS.asignaturaContainer}>
+      <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 2 }} data-testid={TEST_IDS.asignaturaHeader}>
         <BookIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
         Asignatura: {materiaDetalle.nombre}
       </Typography>
 
-      <Paper elevation={2} sx={{
-        mb: 4,
-        borderRadius: 3,
-        overflow: 'hidden',
-        borderLeft: `4px solid ${theme.palette.secondary.main}`
-      }}>
+      <Paper 
+        elevation={2} 
+        data-testid={TEST_IDS.asignaturaInfo}
+        sx={{
+          mb: 4,
+          borderRadius: 3,
+          overflow: 'hidden',
+          borderLeft: `4px solid ${theme.palette.secondary.main}`
+        }}
+      >
         <Box sx={{ p: 2, backgroundColor: theme.palette.action.selected }}>
           <Grid container spacing={1} alignItems="center">
             <Box sx={{ flexBasis: { xs: '100%', sm: '50%' }, maxWidth: { xs: '100%', sm: '50%' }, p: 1 }}>
@@ -650,10 +682,11 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
             size="small"
             sx={{ mr: 2 }}
             disabled={edicionBloqueada}
+            data-testid={TEST_IDS.asistenciaFechaInput}
           />
         </Box>
 
-        <TableContainer component={Paper} variant="outlined" sx={{ mt: 3 }}>
+        <TableContainer component={Paper} variant="outlined" sx={{ mt: 3 }} data-testid={TEST_IDS.estudiantesTable}>
           <Table size="small">
             <TableHead>
               <TableRow sx={{ backgroundColor: theme.palette.grey[100] }}>
@@ -688,7 +721,12 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
                 </TableRow>
               ) : (
                 estudiantesConCambios.map((estudiante) => (
-                  <TableRow key={estudiante.id}>
+                  <TableRow 
+                    key={estudiante.id} 
+                    data-testid={TEST_IDS.estudianteRow(estudiante.id)}
+                    data-estudiante-id={estudiante.id}
+                    data-estudiante-nombre={estudiante.nombre}
+                  >
                     <TableCell>{estudiante.nombre}</TableCell>
                     <TableCell align="center">
                       {/* Selector de asistencia */}
@@ -699,6 +737,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
                           onChange={(e) => handleAsistenciaChange(estudiante.id, e.target.value as 'Presente' | 'Ausente' | 'Justificado')}
                           displayEmpty
                           sx={{ minWidth: 120 }}
+                          data-testid={TEST_IDS.asistenciaSelector(estudiante.id)}
                         >
                           <MenuItem value=""><em>{cargandoAsistencias ? 'Cargando...' : 'Seleccionar'}</em></MenuItem>
                           <MenuItem value="Presente">Presente</MenuItem>
@@ -721,6 +760,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
                             sx={{ width: 80 }}
                             disabled={edicionBloqueada}
                             placeholder="0.0"
+                            data-testid={TEST_IDS.calificacionInput(estudiante.id, periodo)}
                             onBlur={(e) => {
                               const value = e.target.value === '' ? null : parseFloat(e.target.value);
                               handleAutoGuardarCalificacion(estudiante.id, periodo, value);
@@ -729,7 +769,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
                         </TableCell>
                       );
                     })}
-                    <TableCell align="center">
+                    <TableCell align="center" data-testid={TEST_IDS.promedioCell(estudiante.id)}>
                       <Typography variant="body2" fontWeight="bold">
                         {calcularPromedio(estudiante.calificaciones) !== null
                           ? calcularPromedio(estudiante.calificaciones)
@@ -744,6 +784,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
                         onClick={() => handleOpenObservacionModal(estudiante.id, estudiante.nombre)}
                         disabled={edicionBloqueada || !profesorActual}
                         title="Añadir observación disciplinaria"
+                        data-testid={TEST_IDS.observacionBtn(estudiante.id)}
                       >
                         <AddCommentIcon />
                       </IconButton>
@@ -762,6 +803,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
             startIcon={<SaveIcon />}
             onClick={handleGuardarCambios}
             disabled={loading || edicionBloqueada}
+            data-testid={TEST_IDS.guardarCambiosBtn}
           >
             Guardar Cambios
           </Button>
@@ -780,7 +822,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
       </Snackbar>
               
       {/* Modal para Reporte Disciplinario */}
-      <Dialog open={isObservacionModalOpen} onClose={handleCloseObservacionModal} maxWidth="xs" fullWidth>
+      <Dialog open={isObservacionModalOpen} onClose={handleCloseObservacionModal} maxWidth="xs" fullWidth data-testid={TEST_IDS.observacionModal}>
         <DialogTitle>
           Reporte Disciplinario a {currentStudentNameForObservacion}
           <IconButton
@@ -815,6 +857,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
               inputProps={{
                 max: '2025-07-11' // Fecha máxima: julio 11, 2025
               }}
+              data-testid={TEST_IDS.observacionFechaInput}
             />
             <FormControl fullWidth variant="outlined">
               <InputLabel>Tipo de Falta</InputLabel>
@@ -822,6 +865,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
                 value={observacionTipoFalta}
                 onChange={(e) => setObservacionTipoFalta(e.target.value as 'Leve' | 'Grave' | 'Gravísima')}
                 label="Tipo de Falta"
+                data-testid={TEST_IDS.observacionTipoSelect}
               >
                 <MenuItem value="Leve">Falta Leve</MenuItem>
                 <MenuItem value="Grave">Falta Grave</MenuItem>
@@ -835,6 +879,7 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
               onChange={(e) => setObservacionArticulo(e.target.value)}
               variant="outlined"
               placeholder="Ej: Art. 30, Num. 2"
+              data-testid={TEST_IDS.observacionArticuloInput}
             />
             <TextField
               fullWidth
@@ -845,14 +890,15 @@ const VistaAsignatura: React.FC<VistaAsignaturaProps> = ({ materiaId }) => {
               rows={4}
               variant="outlined"
               placeholder="Detalle el incidente de forma clara y concisa."
+              data-testid={TEST_IDS.observacionDescripcionInput}
             />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseObservacionModal} color="secondary">
+          <Button onClick={handleCloseObservacionModal} color="secondary" data-testid={TEST_IDS.observacionCancelarBtn}>
             Cancelar
           </Button>
-          <Button onClick={handleSaveObservacion} color="primary" variant="contained">
+          <Button onClick={handleSaveObservacion} color="primary" variant="contained" data-testid={TEST_IDS.observacionGuardarBtn}>
             Guardar Observación
           </Button>
         </DialogActions>

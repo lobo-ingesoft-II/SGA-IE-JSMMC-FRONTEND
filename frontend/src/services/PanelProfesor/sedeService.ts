@@ -2,6 +2,52 @@ import { Sede } from '../../models/PanelProfesor/sede';
 import { Curso } from '../../models/PanelProfesor/curso';
 import { Materia } from '../../models/PanelProfesor/materia';
 
+// Constantes para testing
+export const TEST_IDS = {
+  sede: (id: string) => `sede-${id}`,
+  curso: (id: string) => `curso-${id}`,
+  materia: (id: string) => `materia-${id}`,
+  loadingIndicator: 'loading-indicator',
+  errorMessage: 'error-message',
+  emptyState: 'empty-state',
+  sedeHeader: 'sede-header',
+  cursosList: 'cursos-list',
+  materiasList: (cursoId: string) => `materias-list-${cursoId}`,
+  expandButton: (cursoId: string) => `expand-button-${cursoId}`
+};
+
+// Datos de prueba para testing
+export const TEST_DATA = {
+  sede: {
+    id: 'sede1',
+    nombre: 'Sede Principal Test'
+  },
+  cursos: [
+    {
+      id: 'curso1',
+      nombre: 'Curso 101',
+      grado: '10°',
+      anioLectivo: 2023,
+      sede: { id: 'sede1', nombre: 'Sede Principal Test' },
+      materias: [
+        { id: 'materia1', nombre: 'Matemáticas', docente: 'Test Profesor' },
+        { id: 'materia2', nombre: 'Física', docente: 'Test Profesor' }
+      ]
+    },
+    {
+      id: 'curso2',
+      nombre: 'Curso 201',
+      grado: '11°',
+      anioLectivo: 2023,
+      sede: { id: 'sede1', nombre: 'Sede Principal Test' },
+      materias: [
+        { id: 'materia3', nombre: 'Química', docente: 'Test Profesor' },
+        { id: 'materia4', nombre: 'Biología', docente: 'Test Profesor' }
+      ]
+    }
+  ]
+};
+
 export interface CursoConSede extends Curso {
   sede: Sede;
   anioLectivo: number;
@@ -118,9 +164,23 @@ async function getMateriasByCursoAndProfesor(
   }
 }
 
+/**
+ * Obtiene la información de una sede y sus cursos asignados
+ * @param sedeId ID de la sede
+ * @param testMode Si es true, devuelve datos de prueba para testing
+ * @returns Información de la sede y sus cursos
+ */
 export async function getSedeAndCursos(
-  sedeId: string
+  sedeId: string,
+  testMode: boolean = false
 ): Promise<{ sede: Sede; cursos: CursoConSede[] }> {
+  // Si estamos en modo test, devolver datos de prueba
+  if (testMode) {
+    return {
+      sede: TEST_DATA.sede,
+      cursos: TEST_DATA.cursos
+    };
+  }
   // Obtener datos del usuario
   const userDataString = localStorage.getItem('user');
   if (!userDataString) {

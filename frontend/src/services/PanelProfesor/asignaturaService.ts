@@ -7,7 +7,133 @@ import { EstudianteAsignatura } from '../../models/PanelProfesor/estudianteAsign
 import { AsistenciaRegistro } from '../../models/PanelProfesor/asistencia'; 
 import { CalificacionRegistro } from '../../models/PanelProfesor/calificacion'; 
 import { Materia } from '../../models/PanelProfesor/materia';
-import { Estudiante, EstudianteAPI } from '../../models/PanelProfesor/estudiante'; 
+import { Estudiante, EstudianteAPI } from '../../models/PanelProfesor/estudiante';
+
+// Constantes para testing
+export const TEST_IDS = {
+  // Contenedores principales
+  asignaturaContainer: 'asignatura-container',
+  loadingIndicator: 'loading-indicator',
+  errorMessage: 'error-message',
+  emptyState: 'empty-state',
+  asignaturaHeader: 'asignatura-header',
+  asignaturaInfo: 'asignatura-info',
+  
+  // Tabla de estudiantes
+  estudiantesTable: 'estudiantes-table',
+  estudianteRow: (id: string) => `estudiante-row-${id}`,
+  
+  // Controles de asistencia
+  asistenciaFechaInput: 'asistencia-fecha-input',
+  asistenciaSelector: (estudianteId: string) => `asistencia-selector-${estudianteId}`,
+  
+  // Controles de calificaciones
+  calificacionInput: (estudianteId: string, periodo: string) => `calificacion-${estudianteId}-${periodo}`,
+  promedioCell: (estudianteId: string) => `promedio-${estudianteId}`,
+  
+  // Botones de acción
+  guardarCambiosBtn: 'guardar-cambios-btn',
+  observacionBtn: (estudianteId: string) => `observacion-btn-${estudianteId}`,
+  
+  // Modal de observaciones
+  observacionModal: 'observacion-modal',
+  observacionFechaInput: 'observacion-fecha-input',
+  observacionTipoSelect: 'observacion-tipo-select',
+  observacionArticuloInput: 'observacion-articulo-input',
+  observacionDescripcionInput: 'observacion-descripcion-input',
+  observacionGuardarBtn: 'observacion-guardar-btn',
+  observacionCancelarBtn: 'observacion-cancelar-btn'
+};
+
+// Datos de prueba para testing
+export const TEST_DATA = {
+  materiaDetalle: {
+    id: 'materia1',
+    nombre: 'Matemáticas',
+    docente: 'Test Profesor',
+    idCurso: 'curso1',
+    nombreCurso: 'Curso 101',
+    idProfesorAsignado: 'profesor1',
+    nombreProfesorAsignado: 'Test Profesor',
+    gradoCurso: '10°',
+    sede: { id: 'sede1', nombre: 'Sede Principal Test' },
+    estudiantes: [
+      {
+        id: 'est1',
+        nombre: 'Estudiante Test 1',
+        inasistencias: 2,
+        asistencias: [
+          { id: 'as1', fecha: '2025-07-10', estado: 'Presente' as const, idProfesor: 'profesor1' }
+        ],
+        calificaciones: [
+          { periodo: 'parcial1' as const, nota: 4.5 },
+          { periodo: 'parcial2' as const, nota: 3.8 },
+          { periodo: 'parcial3' as const, nota: null }
+        ],
+        edicionBloqueada: false
+      },
+      {
+        id: 'est2',
+        nombre: 'Estudiante Test 2',
+        inasistencias: 0,
+        asistencias: [],
+        calificaciones: [
+          { periodo: 'parcial1' as const, nota: 3.0 },
+          { periodo: 'parcial2' as const, nota: 2.5 },
+          { periodo: 'parcial3' as const, nota: 4.0 }
+        ],
+        edicionBloqueada: false
+      },
+      {
+        id: 'est3',
+        nombre: 'Estudiante Test 3',
+        inasistencias: 5,
+        asistencias: [
+          { id: 'as2', fecha: '2025-07-10', estado: 'Ausente' as const, idProfesor: 'profesor1' }
+        ],
+        calificaciones: [
+          { periodo: 'parcial1' as const, nota: 5.0 },
+          { periodo: 'parcial2' as const, nota: null },
+          { periodo: 'parcial3' as const, nota: null }
+        ],
+        edicionBloqueada: false
+      }
+    ]
+  },
+  estudiantesConAsistencias: [
+    {
+      id: 'est1',
+      nombre: 'Estudiante Test 1',
+      inasistencias: 2,
+      asistencias: [],
+      calificaciones: [],
+      edicionBloqueada: false,
+      estadoAsistencia: 'Presente' as const
+    },
+    {
+      id: 'est2',
+      nombre: 'Estudiante Test 2',
+      inasistencias: 0,
+      asistencias: [],
+      calificaciones: [],
+      edicionBloqueada: false,
+      estadoAsistencia: 'No registrado' as const
+    },
+    {
+      id: 'est3',
+      nombre: 'Estudiante Test 3',
+      inasistencias: 5,
+      asistencias: [],
+      calificaciones: [],
+      edicionBloqueada: false,
+      estadoAsistencia: 'Ausente' as const
+    }
+  ],
+  profesor: {
+    id: 'profesor1',
+    nombre: 'Test Profesor'
+  }
+}; 
 
 // =============================================================================
 // CONFIGURACIÓN DE APIS
@@ -206,9 +332,9 @@ async function procesarEstudiantesAPI(estudiantesAPI: EstudianteAPI[], cursoId: 
   
   for (const estudianteAPI of estudiantesAPI) {
     let calificaciones: CalificacionRegistro[] = [
-      { periodo: 'parcial1', nota: null },
-      { periodo: 'parcial2', nota: null },
-      { periodo: 'parcial3', nota: null }
+      { periodo: 'parcial1' as const, nota: null },
+      { periodo: 'parcial2' as const, nota: null },
+      { periodo: 'parcial3' as const, nota: null }
     ];
     
     let inasistencias = 0;
@@ -229,11 +355,14 @@ async function procesarEstudiantesAPI(estudiantesAPI: EstudianteAPI[], cursoId: 
     }
     
     // Crear el objeto EstudianteAsignatura con datos reales
+    // Asegurarse de que asistencias esté correctamente tipado como AsistenciaRegistro[]
+    const asistenciasVacias: AsistenciaRegistro[] = [];
+    
     estudiantes.push({
       id: estudianteAPI.id_estudiante.toString(),
       nombre: `${estudianteAPI.nombres} ${estudianteAPI.apellidos}`,
       inasistencias: inasistencias,
-      asistencias: [], // Se pueden cargar desde API de asistencia si es necesario
+      asistencias: asistenciasVacias, // Aseguramos que sea un array vacío del tipo correcto
       calificaciones: calificaciones,
       edicionBloqueada: !IS_EDITION_ENABLED
     });
@@ -395,30 +524,30 @@ async function getFallbackAsignaturas(profesorId: number): Promise<Materia[]> {
 
 /** Asistencias de prueba para estudiante 1 */
 const fakeAsistenciasEstudiante1: AsistenciaRegistro[] = [
-  { id: 'ar1', fecha: '2024-05-20', estado: 'Presente', idProfesor: 'profesor123' },
-  { id: 'ar2', fecha: '2024-05-21', estado: 'Ausente', idProfesor: 'profesor123', observaciones: 'Enfermo' },
-  { id: 'ar3', fecha: '2024-05-22', estado: 'Justificado', idProfesor: 'profesor123', observaciones: 'Cita médica' },
+  { id: 'ar1', fecha: '2024-05-20', estado: 'Presente' as const, idProfesor: 'profesor123' },
+  { id: 'ar2', fecha: '2024-05-21', estado: 'Ausente' as const, idProfesor: 'profesor123', observaciones: 'Enfermo' },
+  { id: 'ar3', fecha: '2024-05-22', estado: 'Justificado' as const, idProfesor: 'profesor123', observaciones: 'Cita médica' },
 ];
 
 /** Asistencias de prueba para estudiante 2 */
 const fakeAsistenciasEstudiante2: AsistenciaRegistro[] = [
-  { id: 'ar4', fecha: '2024-05-20', estado: 'Presente', idProfesor: 'profesor123' },
-  { id: 'ar5', fecha: '2024-05-21', estado: 'Presente', idProfesor: 'profesor123' },
-  { id: 'ar6', fecha: '2024-05-22', estado: 'Presente', idProfesor: 'profesor123' },
+  { id: 'ar4', fecha: '2024-05-20', estado: 'Presente' as const, idProfesor: 'profesor123' },
+  { id: 'ar5', fecha: '2024-05-21', estado: 'Presente' as const, idProfesor: 'profesor123' },
+  { id: 'ar6', fecha: '2024-05-22', estado: 'Presente' as const, idProfesor: 'profesor123' },
 ];
 
 /** Calificaciones de prueba para estudiante 1 */
 const fakeCalificacionesEstudiante1: CalificacionRegistro[] = [
-  { periodo: 'parcial1', nota: 4.5 },
-  { periodo: 'parcial2', nota: 3.8 },
-  { periodo: 'parcial3', nota: null },
+  { periodo: 'parcial1' as const, nota: 4.5 },
+  { periodo: 'parcial2' as const, nota: 3.8 },
+  { periodo: 'parcial3' as const, nota: null },
 ];
 
 /** Calificaciones de prueba para estudiante 2 */
 const fakeCalificacionesEstudiante2: CalificacionRegistro[] = [
-  { periodo: 'parcial1', nota: 3.0 },
-  { periodo: 'parcial2', nota: 2.5 },
-  { periodo: 'parcial3', nota: 4.0 },
+  { periodo: 'parcial1' as const, nota: 3.0 },
+  { periodo: 'parcial2' as const, nota: 2.5 },
+  { periodo: 'parcial3' as const, nota: 4.0 },
 ];
 
 /** Lista de estudiantes de prueba para fallbacks */
@@ -445,9 +574,9 @@ const fakeEstudiantesGeneral: EstudianteAsignatura[] = [
     inasistencias: 0,
     asistencias: [],
     calificaciones: [
-      { periodo: 'parcial1', nota: 5.0 },
-      { periodo: 'parcial2', nota: null },
-      { periodo: 'parcial3', nota: null },
+      { periodo: 'parcial1' as const, nota: 5.0 },
+      { periodo: 'parcial2' as const, nota: null },
+      { periodo: 'parcial3' as const, nota: null },
     ],
     edicionBloqueada: !IS_EDITION_ENABLED,
   },
@@ -455,8 +584,8 @@ const fakeEstudiantesGeneral: EstudianteAsignatura[] = [
     id: 'est4',
     nombre: 'Diego Sánchez',
     inasistencias: 0,
-    asistencias: [{ fecha: '2024-05-20', estado: 'Presente', idProfesor: 'profesor123' }],
-    calificaciones: [{ periodo: 'parcial1', nota: 3.5 }],
+    asistencias: [{ id: 'ar7', fecha: '2024-05-20', estado: 'Presente' as const, idProfesor: 'profesor123' }],
+    calificaciones: [{ periodo: 'parcial1' as const, nota: 3.5 }],
     edicionBloqueada: !IS_EDITION_ENABLED,
   }
 ];
@@ -652,10 +781,15 @@ async function getCursoByMateriaAndProfesor(materiaNombre: string, profesorId: n
  * Integra con la API de calificaciones para obtener estudiantes reales
  *
  * @param materiaId El ID de la asignación (no de la materia, sino de la asignación específica)
+ * @param testMode Si es true, devuelve datos de prueba para testing
  * @returns Una Promesa que resuelve a los detalles de la materia.
  * @throws Error si la materia no se encuentra o hay un problema de comunicación con el backend.
  */
-export async function getMateriaDetalle(materiaId: string): Promise<MateriaDetalle> {
+export async function getMateriaDetalle(materiaId: string, testMode: boolean = false): Promise<MateriaDetalle> {
+  // Si estamos en modo test, devolver datos de prueba
+  if (testMode) {
+    return TEST_DATA.materiaDetalle;
+  }
   const profesorActual = await getProfesorActual();
 
   // ESTRATEGIA 1: Intentar con el método de asignaturas que sabemos que funciona
@@ -722,6 +856,19 @@ async function obtenerDetalleCompleto(
     // Pasar materiaId específico para obtener estudiantes con calificaciones correctas
     const estudiantes = await getEstudiantesDeLaMateria(materiaId);
     
+    // Asegurar que las asistencias y calificaciones tengan el tipo correcto
+    const estudiantesCorregidos = estudiantes.map(estudiante => ({
+      ...estudiante,
+      asistencias: estudiante.asistencias.map(asistencia => ({
+        ...asistencia,
+        estado: asistencia.estado as 'Presente' | 'Ausente' | 'Justificado'
+      })),
+      calificaciones: estudiante.calificaciones.map(calificacion => ({
+        ...calificacion,
+        periodo: calificacion.periodo as 'parcial1' | 'parcial2' | 'parcial3'
+      }))
+    }));
+    
     return {
       id: materiaId,
       nombre: nombreLimpio,
@@ -730,7 +877,7 @@ async function obtenerDetalleCompleto(
       nombreCurso: nombreCurso,
       idProfesorAsignado: profesorActual.id,
       nombreProfesorAsignado: profesorActual.nombre,
-      estudiantes: estudiantes,
+      estudiantes: estudiantesCorregidos,
       gradoCurso: cursoData.grado,
       estado: 'activa'
     };
@@ -805,6 +952,19 @@ async function obtenerMateriaDirecta(
   // Pasar materiaId específico para obtener estudiantes con calificaciones correctas
   const estudiantes = await getEstudiantesDeLaMateria(materiaId);
   
+  // Asegurar que las asistencias y calificaciones tengan el tipo correcto
+  const estudiantesCorregidos = estudiantes.map(estudiante => ({
+    ...estudiante,
+    asistencias: estudiante.asistencias.map(asistencia => ({
+      ...asistencia,
+      estado: asistencia.estado as 'Presente' | 'Ausente' | 'Justificado'
+    })),
+    calificaciones: estudiante.calificaciones.map(calificacion => ({
+      ...calificacion,
+      periodo: calificacion.periodo as 'parcial1' | 'parcial2' | 'parcial3'
+    }))
+  }));
+  
   const nombreAsignatura = asignacionData.nombre || asignacionData.nombre_asignatura || 'Asignatura sin nombre';
   
   return {
@@ -815,7 +975,7 @@ async function obtenerMateriaDirecta(
     nombreCurso: `${cursoInfo.nombre} (${cursoInfo.grado})`,
     idProfesorAsignado: profesorActual.id,
     nombreProfesorAsignado: profesorActual.nombre,
-    estudiantes: estudiantes,
+    estudiantes: estudiantesCorregidos,
     gradoCurso: cursoInfo.grado,
     estado: 'activa'
   };
@@ -1035,9 +1195,9 @@ export async function getCalificacionesPorEstudianteYAsignatura(
 /** Crea estructura de calificaciones vacías */
 function crearCalificacionesVacias(): CalificacionRegistro[] {
   return [
-    { periodo: 'parcial1', nota: null },
-    { periodo: 'parcial2', nota: null },
-    { periodo: 'parcial3', nota: null }
+    { periodo: 'parcial1' as const, nota: null },
+    { periodo: 'parcial2' as const, nota: null },
+    { periodo: 'parcial3' as const, nota: null }
   ];
 }
 
@@ -1294,9 +1454,14 @@ async function obtenerCursoIdDeLaMateria(materiaId: string, profesorId: number):
 
 /**
  * Obtiene la información del profesor actual
+ * @param testMode Si es true, devuelve datos de prueba para testing
  * @returns Información del profesor con ID y nombre
  */
-export async function getProfesorActual(): Promise<{ id: string; nombre: string }> {
+export async function getProfesorActual(testMode: boolean = false): Promise<{ id: string; nombre: string }> {
+  // Si estamos en modo test, devolver datos de prueba
+  if (testMode) {
+    return TEST_DATA.profesor;
+  }
   await new Promise(resolve => setTimeout(resolve, 100)); // Simula latencia
   
   const userData = localStorage.getItem('user');
@@ -1331,9 +1496,15 @@ export async function getProfesorActual(): Promise<{ id: string; nombre: string 
  * Verifica si la edición está bloqueada para una materia y fecha específica
  * @param idMateria ID de la materia
  * @param fecha Fecha para verificar el bloqueo
+ * @param testMode Si es true, devuelve datos de prueba para testing
  * @returns Promesa que resuelve a 'true' si la edición está bloqueada
  */
-export async function checkIfEditionIsLocked(idMateria: string, fecha: string): Promise<boolean> {
+export async function checkIfEditionIsLocked(idMateria: string, fecha: string, testMode: boolean = false): Promise<boolean> {
+    // En modo test, siempre permitir edición
+    if (testMode) {
+      return false;
+    }
+    
     await new Promise(resolve => setTimeout(resolve, 200)); // Simula latencia
     return !IS_EDITION_ENABLED;
 }
@@ -1453,16 +1624,16 @@ export async function getAsistenciaEstudiante(
     
     switch (asistencia.presente) {
       case 1:
-        estado = 'Presente';
+        estado = 'Presente' as const;
         break;
       case 2:
-        estado = 'Ausente';
+        estado = 'Ausente' as const;
         break;
       case 3:
-        estado = 'Justificado';
+        estado = 'Justificado' as const;
         break;
       default:
-        estado = 'Ausente'; // fallback
+        estado = 'Ausente' as const; // fallback
         break;
     }
     
@@ -1529,16 +1700,16 @@ export async function getAsistenciasCurso(
       
       switch (asistencia.presente) {
         case 1:
-          estado = 'Presente';
+          estado = 'Presente' as const;
           break;
         case 2:
-          estado = 'Ausente';
+          estado = 'Ausente' as const;
           break;
         case 3:
-          estado = 'Justificado';
+          estado = 'Justificado' as const;
           break;
         default:
-          estado = 'Ausente'; // fallback
+          estado = 'Ausente' as const; // fallback
           break;
       }
       
@@ -1560,14 +1731,20 @@ export async function getAsistenciasCurso(
  * 
  * @param idMateria ID de la materia/asignación (usado para obtener estudiantes del curso)
  * @param fecha Fecha para consultar asistencias (YYYY-MM-DD)
+ * @param testMode Si es true, devuelve datos de prueba para testing
  * @returns Lista de estudiantes con su estado de asistencia incluido
  */
 export async function getEstudiantesConAsistencias(
   idMateria: string,
-  fecha: string
+  fecha: string,
+  testMode: boolean = false
 ): Promise<Array<EstudianteAsignatura & { 
   estadoAsistencia: 'Presente' | 'Ausente' | 'Justificado' | 'No registrado'
 }>> {
+  // Si estamos en modo test, devolver datos de prueba
+  if (testMode) {
+    return TEST_DATA.estudiantesConAsistencias;
+  }
   
   try {
     // Usar la función optimizada para obtener asistencias por fecha
@@ -1773,16 +1950,16 @@ export async function obtenerDetalleAsistencia(
     let estado: 'Presente' | 'Ausente' | 'Justificado';
     switch (asistencia.presente) {
       case 1:
-        estado = 'Presente';
+        estado = 'Presente' as const;
         break;
       case 2:
-        estado = 'Ausente';
+        estado = 'Ausente' as const;
         break;
       case 3:
-        estado = 'Justificado';
+        estado = 'Justificado' as const;
         break;
       default:
-        estado = 'Ausente';
+        estado = 'Ausente' as const;
     }
 
     const resultado = {
@@ -1907,16 +2084,16 @@ export async function obtenerAsistenciaPorId(
     let estado: 'Presente' | 'Ausente' | 'Justificado';
     switch (asistencia.presente) {
       case 1:
-        estado = 'Presente';
+        estado = 'Presente' as const;
         break;
       case 2:
-        estado = 'Ausente';
+        estado = 'Ausente' as const;
         break;
       case 3:
-        estado = 'Justificado';
+        estado = 'Justificado' as const;
         break;
       default:
-        estado = 'Ausente';
+        estado = 'Ausente' as const;
     }
 
     const resultado = {

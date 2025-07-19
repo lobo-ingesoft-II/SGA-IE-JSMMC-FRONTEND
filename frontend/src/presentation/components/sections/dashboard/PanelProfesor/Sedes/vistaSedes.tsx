@@ -18,7 +18,7 @@ import {
   Book as BookIcon
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSedeAndCursos, CursoConSede } from '../../../../../../services/PanelProfesor/sedeService';
+import { getSedeAndCursos, CursoConSede, TEST_IDS } from '../../../../../../services/PanelProfesor/sedeService';
 import { Sede } from '../../../../../../models/PanelProfesor/sede';
 import { useAuth } from '../../../../../../context/authContext';
 
@@ -40,9 +40,19 @@ const VistaSedes = () => {
       setError(null);
 
       try {
-        const { sede: sedeData, cursos: cursosData } = await getSedeAndCursos(sedeId || '');
+        // Verificar si estamos en modo de prueba (URL con param test=true)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isTestMode = urlParams.get('test') === 'true';
+        
+        const { sede: sedeData, cursos: cursosData } = await getSedeAndCursos(sedeId || '', isTestMode);
         setSede(sedeData);
         setCursos(cursosData);
+        
+        // Exponer datos para testing
+        if (isTestMode && typeof window !== 'undefined') {
+          // @ts-ignore - Ignorar error de TypeScript
+          window.sedeData = { sede: sedeData, cursos: cursosData };
+        }
       } catch (err: any) {
         console.warn('Error al cargar los datos de la sede:', err.message);
         setError('No se pudo cargar la información de la sede');
@@ -52,6 +62,14 @@ const VistaSedes = () => {
     }
 
     fetchData();
+    
+    // Limpiar al desmontar
+    return () => {
+      if (typeof window !== 'undefined' && 'sedeData' in window) {
+        // @ts-ignore - Ignorar error de TypeScript
+        delete window.sedeData;
+      }
+    };
   }, [sedeId]);
 
   const handleExpandCurso = (cursoId: string) => {
@@ -64,7 +82,7 @@ const VistaSedes = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box data-testid={TEST_IDS.loadingIndicator} display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <Typography variant="h6">Cargando información de la sede...</Typography>
       </Box>
     );
@@ -72,7 +90,7 @@ const VistaSedes = () => {
 
   if (error) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box data-testid={TEST_IDS.errorMessage} display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <Typography variant="h6" color="error">
           {error}
         </Typography>
@@ -82,7 +100,7 @@ const VistaSedes = () => {
 
   if (!sede) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box data-testid={TEST_IDS.emptyState} display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <Typography variant="h6" color="error">
           Sede no encontrada
         </Typography>
@@ -91,8 +109,8 @@ const VistaSedes = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: 3 }}>
+    <Box sx={{ p: 3 }} data-testid={TEST_IDS.sede(sede.id)}>
+      <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: 3 }} data-testid={TEST_IDS.sedeHeader}>
         <Stack direction="row" spacing={3} alignItems="center">
           <Avatar
             sx={{ width: 100, height: 100, bgcolor: theme.palette.primary.main, fontSize: 40 }}
@@ -113,16 +131,20 @@ const VistaSedes = () => {
       </Typography>
 
       {cursos.length === 0 ? (
-        <Paper elevation={2} sx={{ p: 3, textAlign: 'center', borderRadius: 3 }}>
+        <Paper elevation={2} sx={{ p: 3, textAlign: 'center', borderRadius: 3 }} data-testid={TEST_IDS.emptyState}>
           <Typography variant="body1" color="text.secondary">
             No tienes cursos asignados en esta sede.
           </Typography>
         </Paper>
       ) : (
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 4 }} data-testid={TEST_IDS.cursosList}>
           {cursos.map((curso) => (
             <Paper
               key={curso.id}
+              data-testid={TEST_IDS.curso(curso.id)}
+              data-curso-id={curso.id}
+              data-curso-nombre={curso.nombre}
+              data-curso-grado={curso.grado}
               elevation={2}
               sx={{
                 mb: 2,
@@ -156,7 +178,7 @@ const VistaSedes = () => {
                     <Chip label={`${curso.materias.length} materias`} size="small" />
                   </Stack>
                 </Box>
-                <IconButton>
+                <IconButton data-testid={TEST_IDS.expandButton(curso.id)}>
                   {expandedCurso === curso.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                 </IconButton>
               </Box>
@@ -174,6 +196,7 @@ const VistaSedes = () => {
                   </Typography>
 
                   <Box
+                    data-testid={TEST_IDS.materiasList(curso.id)}
                     sx={{
                       display: 'grid',
                       gridTemplateColumns: {
@@ -187,6 +210,10 @@ const VistaSedes = () => {
                     {curso.materias.map((materia) => (
                       <Paper
                         key={materia.id}
+                        data-testid={TEST_IDS.materia(materia.id)}
+                        data-materia-id={materia.id}
+                        data-materia-nombre={materia.nombre}
+                        data-materia-docente={materia.docente}
                         elevation={1}
                         onClick={() => handleClickMateria(materia.id)}
                         sx={{
