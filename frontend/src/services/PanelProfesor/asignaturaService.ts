@@ -63,12 +63,12 @@ export const TEST_DATA = {
         nombre: 'Estudiante Test 1',
         inasistencias: 2,
         asistencias: [
-          { id: 'as1', fecha: '2025-07-10', estado: 'Presente', idProfesor: 'profesor1' }
+          { id: 'as1', fecha: '2025-07-10', estado: 'Presente' as const, idProfesor: 'profesor1' }
         ],
         calificaciones: [
-          { periodo: 'parcial1', nota: 4.5 },
-          { periodo: 'parcial2', nota: 3.8 },
-          { periodo: 'parcial3', nota: null }
+          { periodo: 'parcial1' as const, nota: 4.5 },
+          { periodo: 'parcial2' as const, nota: 3.8 },
+          { periodo: 'parcial3' as const, nota: null }
         ],
         edicionBloqueada: false
       },
@@ -78,9 +78,9 @@ export const TEST_DATA = {
         inasistencias: 0,
         asistencias: [],
         calificaciones: [
-          { periodo: 'parcial1', nota: 3.0 },
-          { periodo: 'parcial2', nota: 2.5 },
-          { periodo: 'parcial3', nota: 4.0 }
+          { periodo: 'parcial1' as const, nota: 3.0 },
+          { periodo: 'parcial2' as const, nota: 2.5 },
+          { periodo: 'parcial3' as const, nota: 4.0 }
         ],
         edicionBloqueada: false
       },
@@ -89,12 +89,12 @@ export const TEST_DATA = {
         nombre: 'Estudiante Test 3',
         inasistencias: 5,
         asistencias: [
-          { id: 'as2', fecha: '2025-07-10', estado: 'Ausente', idProfesor: 'profesor1' }
+          { id: 'as2', fecha: '2025-07-10', estado: 'Ausente' as const, idProfesor: 'profesor1' }
         ],
         calificaciones: [
-          { periodo: 'parcial1', nota: 5.0 },
-          { periodo: 'parcial2', nota: null },
-          { periodo: 'parcial3', nota: null }
+          { periodo: 'parcial1' as const, nota: 5.0 },
+          { periodo: 'parcial2' as const, nota: null },
+          { periodo: 'parcial3' as const, nota: null }
         ],
         edicionBloqueada: false
       }
@@ -332,9 +332,9 @@ async function procesarEstudiantesAPI(estudiantesAPI: EstudianteAPI[], cursoId: 
   
   for (const estudianteAPI of estudiantesAPI) {
     let calificaciones: CalificacionRegistro[] = [
-      { periodo: 'parcial1', nota: null },
-      { periodo: 'parcial2', nota: null },
-      { periodo: 'parcial3', nota: null }
+      { periodo: 'parcial1' as const, nota: null },
+      { periodo: 'parcial2' as const, nota: null },
+      { periodo: 'parcial3' as const, nota: null }
     ];
     
     let inasistencias = 0;
@@ -355,11 +355,14 @@ async function procesarEstudiantesAPI(estudiantesAPI: EstudianteAPI[], cursoId: 
     }
     
     // Crear el objeto EstudianteAsignatura con datos reales
+    // Asegurarse de que asistencias esté correctamente tipado como AsistenciaRegistro[]
+    const asistenciasVacias: AsistenciaRegistro[] = [];
+    
     estudiantes.push({
       id: estudianteAPI.id_estudiante.toString(),
       nombre: `${estudianteAPI.nombres} ${estudianteAPI.apellidos}`,
       inasistencias: inasistencias,
-      asistencias: [], // Se pueden cargar desde API de asistencia si es necesario
+      asistencias: asistenciasVacias, // Aseguramos que sea un array vacío del tipo correcto
       calificaciones: calificaciones,
       edicionBloqueada: !IS_EDITION_ENABLED
     });
@@ -521,30 +524,30 @@ async function getFallbackAsignaturas(profesorId: number): Promise<Materia[]> {
 
 /** Asistencias de prueba para estudiante 1 */
 const fakeAsistenciasEstudiante1: AsistenciaRegistro[] = [
-  { id: 'ar1', fecha: '2024-05-20', estado: 'Presente', idProfesor: 'profesor123' },
-  { id: 'ar2', fecha: '2024-05-21', estado: 'Ausente', idProfesor: 'profesor123', observaciones: 'Enfermo' },
-  { id: 'ar3', fecha: '2024-05-22', estado: 'Justificado', idProfesor: 'profesor123', observaciones: 'Cita médica' },
+  { id: 'ar1', fecha: '2024-05-20', estado: 'Presente' as const, idProfesor: 'profesor123' },
+  { id: 'ar2', fecha: '2024-05-21', estado: 'Ausente' as const, idProfesor: 'profesor123', observaciones: 'Enfermo' },
+  { id: 'ar3', fecha: '2024-05-22', estado: 'Justificado' as const, idProfesor: 'profesor123', observaciones: 'Cita médica' },
 ];
 
 /** Asistencias de prueba para estudiante 2 */
 const fakeAsistenciasEstudiante2: AsistenciaRegistro[] = [
-  { id: 'ar4', fecha: '2024-05-20', estado: 'Presente', idProfesor: 'profesor123' },
-  { id: 'ar5', fecha: '2024-05-21', estado: 'Presente', idProfesor: 'profesor123' },
-  { id: 'ar6', fecha: '2024-05-22', estado: 'Presente', idProfesor: 'profesor123' },
+  { id: 'ar4', fecha: '2024-05-20', estado: 'Presente' as const, idProfesor: 'profesor123' },
+  { id: 'ar5', fecha: '2024-05-21', estado: 'Presente' as const, idProfesor: 'profesor123' },
+  { id: 'ar6', fecha: '2024-05-22', estado: 'Presente' as const, idProfesor: 'profesor123' },
 ];
 
 /** Calificaciones de prueba para estudiante 1 */
 const fakeCalificacionesEstudiante1: CalificacionRegistro[] = [
-  { periodo: 'parcial1', nota: 4.5 },
-  { periodo: 'parcial2', nota: 3.8 },
-  { periodo: 'parcial3', nota: null },
+  { periodo: 'parcial1' as const, nota: 4.5 },
+  { periodo: 'parcial2' as const, nota: 3.8 },
+  { periodo: 'parcial3' as const, nota: null },
 ];
 
 /** Calificaciones de prueba para estudiante 2 */
 const fakeCalificacionesEstudiante2: CalificacionRegistro[] = [
-  { periodo: 'parcial1', nota: 3.0 },
-  { periodo: 'parcial2', nota: 2.5 },
-  { periodo: 'parcial3', nota: 4.0 },
+  { periodo: 'parcial1' as const, nota: 3.0 },
+  { periodo: 'parcial2' as const, nota: 2.5 },
+  { periodo: 'parcial3' as const, nota: 4.0 },
 ];
 
 /** Lista de estudiantes de prueba para fallbacks */
@@ -571,9 +574,9 @@ const fakeEstudiantesGeneral: EstudianteAsignatura[] = [
     inasistencias: 0,
     asistencias: [],
     calificaciones: [
-      { periodo: 'parcial1', nota: 5.0 },
-      { periodo: 'parcial2', nota: null },
-      { periodo: 'parcial3', nota: null },
+      { periodo: 'parcial1' as const, nota: 5.0 },
+      { periodo: 'parcial2' as const, nota: null },
+      { periodo: 'parcial3' as const, nota: null },
     ],
     edicionBloqueada: !IS_EDITION_ENABLED,
   },
@@ -581,8 +584,8 @@ const fakeEstudiantesGeneral: EstudianteAsignatura[] = [
     id: 'est4',
     nombre: 'Diego Sánchez',
     inasistencias: 0,
-    asistencias: [{ fecha: '2024-05-20', estado: 'Presente', idProfesor: 'profesor123' }],
-    calificaciones: [{ periodo: 'parcial1', nota: 3.5 }],
+    asistencias: [{ id: 'ar7', fecha: '2024-05-20', estado: 'Presente' as const, idProfesor: 'profesor123' }],
+    calificaciones: [{ periodo: 'parcial1' as const, nota: 3.5 }],
     edicionBloqueada: !IS_EDITION_ENABLED,
   }
 ];
@@ -853,6 +856,19 @@ async function obtenerDetalleCompleto(
     // Pasar materiaId específico para obtener estudiantes con calificaciones correctas
     const estudiantes = await getEstudiantesDeLaMateria(materiaId);
     
+    // Asegurar que las asistencias y calificaciones tengan el tipo correcto
+    const estudiantesCorregidos = estudiantes.map(estudiante => ({
+      ...estudiante,
+      asistencias: estudiante.asistencias.map(asistencia => ({
+        ...asistencia,
+        estado: asistencia.estado as 'Presente' | 'Ausente' | 'Justificado'
+      })),
+      calificaciones: estudiante.calificaciones.map(calificacion => ({
+        ...calificacion,
+        periodo: calificacion.periodo as 'parcial1' | 'parcial2' | 'parcial3'
+      }))
+    }));
+    
     return {
       id: materiaId,
       nombre: nombreLimpio,
@@ -861,7 +877,7 @@ async function obtenerDetalleCompleto(
       nombreCurso: nombreCurso,
       idProfesorAsignado: profesorActual.id,
       nombreProfesorAsignado: profesorActual.nombre,
-      estudiantes: estudiantes,
+      estudiantes: estudiantesCorregidos,
       gradoCurso: cursoData.grado,
       estado: 'activa'
     };
@@ -936,6 +952,19 @@ async function obtenerMateriaDirecta(
   // Pasar materiaId específico para obtener estudiantes con calificaciones correctas
   const estudiantes = await getEstudiantesDeLaMateria(materiaId);
   
+  // Asegurar que las asistencias y calificaciones tengan el tipo correcto
+  const estudiantesCorregidos = estudiantes.map(estudiante => ({
+    ...estudiante,
+    asistencias: estudiante.asistencias.map(asistencia => ({
+      ...asistencia,
+      estado: asistencia.estado as 'Presente' | 'Ausente' | 'Justificado'
+    })),
+    calificaciones: estudiante.calificaciones.map(calificacion => ({
+      ...calificacion,
+      periodo: calificacion.periodo as 'parcial1' | 'parcial2' | 'parcial3'
+    }))
+  }));
+  
   const nombreAsignatura = asignacionData.nombre || asignacionData.nombre_asignatura || 'Asignatura sin nombre';
   
   return {
@@ -946,7 +975,7 @@ async function obtenerMateriaDirecta(
     nombreCurso: `${cursoInfo.nombre} (${cursoInfo.grado})`,
     idProfesorAsignado: profesorActual.id,
     nombreProfesorAsignado: profesorActual.nombre,
-    estudiantes: estudiantes,
+    estudiantes: estudiantesCorregidos,
     gradoCurso: cursoInfo.grado,
     estado: 'activa'
   };
@@ -1166,9 +1195,9 @@ export async function getCalificacionesPorEstudianteYAsignatura(
 /** Crea estructura de calificaciones vacías */
 function crearCalificacionesVacias(): CalificacionRegistro[] {
   return [
-    { periodo: 'parcial1', nota: null },
-    { periodo: 'parcial2', nota: null },
-    { periodo: 'parcial3', nota: null }
+    { periodo: 'parcial1' as const, nota: null },
+    { periodo: 'parcial2' as const, nota: null },
+    { periodo: 'parcial3' as const, nota: null }
   ];
 }
 
@@ -1595,16 +1624,16 @@ export async function getAsistenciaEstudiante(
     
     switch (asistencia.presente) {
       case 1:
-        estado = 'Presente';
+        estado = 'Presente' as const;
         break;
       case 2:
-        estado = 'Ausente';
+        estado = 'Ausente' as const;
         break;
       case 3:
-        estado = 'Justificado';
+        estado = 'Justificado' as const;
         break;
       default:
-        estado = 'Ausente'; // fallback
+        estado = 'Ausente' as const; // fallback
         break;
     }
     
@@ -1671,16 +1700,16 @@ export async function getAsistenciasCurso(
       
       switch (asistencia.presente) {
         case 1:
-          estado = 'Presente';
+          estado = 'Presente' as const;
           break;
         case 2:
-          estado = 'Ausente';
+          estado = 'Ausente' as const;
           break;
         case 3:
-          estado = 'Justificado';
+          estado = 'Justificado' as const;
           break;
         default:
-          estado = 'Ausente'; // fallback
+          estado = 'Ausente' as const; // fallback
           break;
       }
       
@@ -1921,16 +1950,16 @@ export async function obtenerDetalleAsistencia(
     let estado: 'Presente' | 'Ausente' | 'Justificado';
     switch (asistencia.presente) {
       case 1:
-        estado = 'Presente';
+        estado = 'Presente' as const;
         break;
       case 2:
-        estado = 'Ausente';
+        estado = 'Ausente' as const;
         break;
       case 3:
-        estado = 'Justificado';
+        estado = 'Justificado' as const;
         break;
       default:
-        estado = 'Ausente';
+        estado = 'Ausente' as const;
     }
 
     const resultado = {
@@ -2055,16 +2084,16 @@ export async function obtenerAsistenciaPorId(
     let estado: 'Presente' | 'Ausente' | 'Justificado';
     switch (asistencia.presente) {
       case 1:
-        estado = 'Presente';
+        estado = 'Presente' as const;
         break;
       case 2:
-        estado = 'Ausente';
+        estado = 'Ausente' as const;
         break;
       case 3:
-        estado = 'Justificado';
+        estado = 'Justificado' as const;
         break;
       default:
-        estado = 'Ausente';
+        estado = 'Ausente' as const;
     }
 
     const resultado = {
