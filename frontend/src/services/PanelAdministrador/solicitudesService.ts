@@ -21,11 +21,50 @@ const apiClient = axios.create({
 export const getSolicitudesPrematricula = async (): Promise<SolicitudesResponse> => {
   try {
     const response = await apiClient.get('/adm_pre_registro/pre_registros');
+    
+    // Asegurarse de que los datos tengan el formato correcto
+    if (response.data && response.data.coleccion) {
+      // Mapear los datos si es necesario para asegurar compatibilidad
+      const solicitudesMapeadas = response.data.coleccion.map((solicitud: any) => ({
+        id: solicitud.id || solicitud._id,
+        numeroDocumento: solicitud.numeroDocumento,
+        nombres: solicitud.nombres,
+        apellidos: solicitud.apellidos,
+        fechaNacimiento: solicitud.fechaNacimiento,
+        edad: solicitud.edad || calcularEdad(solicitud.fechaNacimiento),
+        acudiente1CC: solicitud.acudiente1CC,
+        nombreAcudiente1: solicitud.nombreAcudiente1,
+        telefonoAcudiente1: solicitud.telefonoAcudiente1,
+        correoAcudiente1: solicitud.correoAcudiente1,
+        sede: solicitud.sede,
+        gradoSolicitado: solicitud.gradoSolicitado,
+        fechaSolicitud: solicitud.fechaSolicitud || new Date().toISOString(),
+        observaciones: solicitud.observaciones,
+        estado: solicitud.estado || 'pendiente'
+      }));
+      
+      return { coleccion: solicitudesMapeadas };
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Error al obtener solicitudes de prematrícula:', error);
     throw new Error('No se pudieron cargar las solicitudes de prematrícula');
   }
+};
+
+// Función auxiliar para calcular la edad a partir de la fecha de nacimiento
+const calcularEdad = (fechaNacimiento: string): number => {
+  const hoy = new Date();
+  const fechaNac = new Date(fechaNacimiento);
+  let edad = hoy.getFullYear() - fechaNac.getFullYear();
+  const mes = hoy.getMonth() - fechaNac.getMonth();
+  
+  if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNac.getDate())) {
+    edad--;
+  }
+  
+  return edad;
 };
 
 /**

@@ -309,7 +309,7 @@ const VistaSolicitudes = () => {
   };
 
   // Obtener sedes únicas para los tabs
-  const sedesUnicas = [...new Set(MOCK_SOLICITUDES.map(s => s.sede))];
+  const sedesUnicas = [...new Set(solicitudes.map(s => s.sede))];
 
   if (loading && solicitudes.length === 0) {
     return (
