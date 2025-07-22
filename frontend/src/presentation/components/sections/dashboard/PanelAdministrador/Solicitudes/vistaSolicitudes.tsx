@@ -341,8 +341,8 @@ const VistaSolicitudes = () => {
   }
 
   return (
-    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-      <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, width: '100%' }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: 3, width: '100%' }}>
         <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
           <AssignmentIcon sx={{ mr: 2 }} />
           Solicitudes de Prematrícula
@@ -390,8 +390,8 @@ const VistaSolicitudes = () => {
         </Box>
         
         {/* Tabla de solicitudes */}
-        <TableContainer component={Paper} variant="outlined" sx={{ overflow: 'auto' }}>
-          <Table>
+        <TableContainer component={Paper} variant="outlined" sx={{ overflow: 'auto', width: '100%' }}>
+          <Table sx={{ minWidth: '100%' }}>
             <TableHead>
               <TableRow>
                 <TableCell>Estudiante</TableCell>
