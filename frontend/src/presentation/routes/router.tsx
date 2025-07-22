@@ -96,6 +96,14 @@ const PanelAdminUsuarios = lazy(() =>
   ]).then(([moduleExports]) => moduleExports)
 );
 
+const PanelAdminSolicitudes = lazy(() =>
+  Promise.all([
+    import('../pages/PanelAdministrador/Solicitudes'),
+    new Promise((resolve) => setTimeout(resolve, 500)),
+  ]).then(([moduleExports]) => moduleExports)
+);
+
+
 const routes: RouteObject[] = [
   {
     element: (
@@ -165,6 +173,10 @@ const routes: RouteObject[] = [
           {
             path: ':inicioId/Usuarios',
             element: <PanelAdminUsuarios />,
+          },
+          {
+            path: ':inicioId/Solicitudes',
+            element: <PanelAdminSolicitudes />,
           },
         ],
       },
