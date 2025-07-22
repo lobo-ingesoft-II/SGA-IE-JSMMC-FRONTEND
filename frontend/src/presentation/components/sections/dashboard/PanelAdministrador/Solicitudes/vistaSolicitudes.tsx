@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getSolicitudesConFallback, aprobarSolicitud, rechazarSolicitud } from '../../../../../../services/PanelAdministrador/solicitudesService';
+import { getCursosConFallback } from '../../../../../../services/PanelAdministrador/cursosService';
 import {
   Box,
   Typography,
@@ -79,64 +80,7 @@ interface CursoDisponible {
   cupos_disponibles: number;
 }
 
-// Datos mock para desarrollo
-const MOCK_SOLICITUDES: SolicitudPrematricula[] = [
-  {
-    id: "1",
-    numeroDocumento: "1234567890",
-    nombres: "Juan Carlos",
-    apellidos: "Pérez Gómez",
-    fechaNacimiento: "2010-03-15",
-    edad: 13,
-    acudiente1CC: "98765432101",
-    nombreAcudiente1: "María Gómez",
-    telefonoAcudiente1: "3001234567",
-    correoAcudiente1: "maria.gomez@email.com",
-    sede: "Sede Principal",
-    gradoSolicitado: "Séptimo",
-    fechaSolicitud: "2024-01-15T10:30:00Z",
-    observaciones: "Estudiante con buen rendimiento académico",
-    estado: "pendiente"
-  },
-  {
-    id: "2",
-    numeroDocumento: "0987654321",
-    nombres: "Ana Sofia",
-    apellidos: "Rodríguez López",
-    fechaNacimiento: "2009-07-22",
-    edad: 14,
-    acudiente1CC: "12345678901",
-    nombreAcudiente1: "Carlos Rodríguez",
-    telefonoAcudiente1: "3109876543",
-    correoAcudiente1: "carlos.rodriguez@email.com",
-    sede: "Sede Norte",
-    gradoSolicitado: "Octavo",
-    fechaSolicitud: "2024-01-14T14:20:00Z",
-    estado: "pendiente"
-  },
-  {
-    id: "3",
-    numeroDocumento: "1122334455",
-    nombres: "Luis Fernando",
-    apellidos: "González Castro",
-    fechaNacimiento: "2011-01-10",
-    edad: 12,
-    acudiente1CC: "55443322101",
-    nombreAcudiente1: "Carmen Castro",
-    telefonoAcudiente1: "3125551234",
-    correoAcudiente1: "carmen.castro@email.com",
-    sede: "Sede Principal",
-    gradoSolicitado: "Sexto",
-    fechaSolicitud: "2024-01-13T09:15:00Z",
-    estado: "pendiente"
-  }
-];
 
-const MOCK_CURSOS: CursoDisponible[] = [
-  { id: 1, nombre: "6-A", grado: "Sexto", sede: "Sede Principal", cupos_disponibles: 8 },
-  { id: 2, nombre: "7-A", grado: "Séptimo", sede: "Sede Principal", cupos_disponibles: 5 },
-  { id: 3, nombre: "8-B", grado: "Octavo", sede: "Sede Norte", cupos_disponibles: 3 }
-];
 
 const SOLICITUDES_POR_PAGINA = 15;
 
@@ -160,6 +104,7 @@ const VistaSolicitudes = () => {
   const [cursoSeleccionado, setCursoSeleccionado] = useState<number | ''>('');
   const [observacionesRechazo, setObservacionesRechazo] = useState('');
   const [procesando, setProcesando] = useState(false);
+  const [cursosDisponibles, setCursosDisponibles] = useState<any[]>([]);
 
   // Estado para el total de solicitudes
   const [totalSolicitudes, setTotalSolicitudes] = useState(0);
@@ -216,10 +161,24 @@ const VistaSolicitudes = () => {
   );
 
   // Manejadores para los modales
-  const abrirModalAprobacion = (solicitud: SolicitudPrematricula) => {
+  const abrirModalAprobacion = async (solicitud: SolicitudPrematricula) => {
     setSolicitudSeleccionada(solicitud);
     setCursoSeleccionado('');
     setModalAprobar(true);
+    
+    // Cargar cursos disponibles para esta sede y grado
+    try {
+      const cursos = await getCursosConFallback(solicitud.sede, solicitud.gradoSolicitado);
+      setCursosDisponibles(cursos);
+    } catch (error) {
+      console.error('Error al cargar cursos disponibles:', error);
+      setNotificacion({
+        abierta: true,
+        mensaje: 'No se pudieron cargar los cursos disponibles',
+        tipo: 'error'
+      });
+      setCursosDisponibles([]);
+    }
   };
 
   const abrirModalRechazo = (solicitud: SolicitudPrematricula) => {
@@ -308,8 +267,23 @@ const VistaSolicitudes = () => {
     setNotificacion(prev => ({ ...prev, abierta: false }));
   };
 
-  // Obtener sedes únicas para los tabs
-  const sedesUnicas = [...new Set(solicitudes.map(s => s.sede))];
+  // Mantener un estado para todas las sedes disponibles
+  const [todasLasSedes, setTodasLasSedes] = useState<string[]>([]);
+  
+  // Cargar todas las sedes disponibles al iniciar
+  useEffect(() => {
+    const cargarTodasLasSedes = async () => {
+      try {
+        const todasSolicitudes = await getSolicitudesConFallback();
+        const sedes = [...new Set(todasSolicitudes.map(s => s.sede))];
+        setTodasLasSedes(sedes);
+      } catch (error) {
+        console.error('Error al cargar sedes:', error);
+      }
+    };
+    
+    cargarTodasLasSedes();
+  }, []);
 
   if (loading && solicitudes.length === 0) {
     return (
@@ -358,7 +332,7 @@ const VistaSolicitudes = () => {
             scrollButtons="auto"
           >
             <Tab label="Todas las Sedes" value="todas" />
-            {sedesUnicas.map(sede => (
+            {todasLasSedes.map(sede => (
               <Tab key={sede} label={sede} value={sede} />
             ))}
           </Tabs>
@@ -573,16 +547,11 @@ const VistaSolicitudes = () => {
                   onChange={(e) => setCursoSeleccionado(e.target.value)}
                   required
                 >
-                  {MOCK_CURSOS
-                    .filter(curso => 
-                      curso.grado === solicitudSeleccionada.gradoSolicitado &&
-                      curso.sede === solicitudSeleccionada.sede
-                    )
-                    .map(curso => (
-                      <MenuItem key={curso.id} value={curso.id}>
-                        {curso.nombre} - {curso.grado} ({curso.cupos_disponibles} cupos disponibles)
-                      </MenuItem>
-                    ))}
+                  {cursosDisponibles.map(curso => (
+                    <MenuItem key={curso.id} value={curso.id}>
+                      {curso.nombre} - {curso.grado} ({curso.cupos_disponibles} cupos disponibles)
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
               
