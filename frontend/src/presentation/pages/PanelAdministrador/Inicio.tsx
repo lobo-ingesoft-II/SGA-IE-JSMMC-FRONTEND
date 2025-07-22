@@ -34,7 +34,7 @@ const Inicio: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.id && String(inicioId) !== String(user.id)) {
+    if (user?.id && inicioId && String(inicioId) !== String(user.id)) {
       navigate(`/PanelAdministrador/${user.id}/Inicio`, { replace: true });
     }
   }, [inicioId, user, navigate]);
