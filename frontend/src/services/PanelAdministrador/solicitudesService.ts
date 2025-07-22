@@ -91,11 +91,31 @@ export const aprobarSolicitud = async (solicitudId: string, cursoId: number): Pr
     return response.data;
   } catch (error: any) {
     console.error('Error al aprobar solicitud:', error);
-    if (error.response) {
+    
+    // Extraer el mensaje de error detallado
+    let mensajeError = 'No se pudo aprobar la solicitud';
+    
+    if (error.response && error.response.data) {
       console.error('Detalles del error:', error.response.data);
-      throw new Error(`No se pudo aprobar la solicitud: ${error.response.data.detail || error.message}`);
+      
+      // Extraer el mensaje de error del backend
+      if (error.response.data.detail) {
+        mensajeError = error.response.data.detail;
+      }
+      
+      // Manejar códigos de error específicos
+      if (error.response.status === 404) {
+        if (mensajeError.includes('Acudiente no encontrado')) {
+          mensajeError = 'No se encontró el acudiente. Verifique que el documento del acudiente sea válido.';
+        } else if (mensajeError.includes('Sede no encontrada')) {
+          mensajeError = 'No se encontró la sede especificada en la solicitud.';
+        } else if (mensajeError.includes('Prematricula no encontrada')) {
+          mensajeError = 'No se encontró la solicitud de prematrícula.';
+        }
+      }
     }
-    throw new Error('No se pudo aprobar la solicitud');
+    
+    throw new Error(mensajeError);
   }
 };
 

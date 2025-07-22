@@ -202,6 +202,12 @@ const VistaSolicitudes = () => {
     setProcesando(true);
     try {
       console.log(`Aprobando solicitud: ${solicitudSeleccionada.id} para curso: ${cursoSeleccionado}`);
+      console.log('Datos de la solicitud:', solicitudSeleccionada);
+      
+      // Verificar que el documento del acudiente exista
+      if (!solicitudSeleccionada.acudiente1CC) {
+        throw new Error('El documento del acudiente no está presente en la solicitud');
+      }
       
       // Llamada real a la API
       const resultado = await aprobarSolicitud(solicitudSeleccionada.id, cursoSeleccionado as number);
@@ -221,9 +227,18 @@ const VistaSolicitudes = () => {
 
     } catch (err: any) {
       console.error('Error al aprobar solicitud:', err);
+      
+      // Mensaje de error más específico
+      let mensajeError = err.message || 'No se pudo aprobar la solicitud';
+      
+      // Detectar errores específicos
+      if (mensajeError.includes('Acudiente no encontrado')) {
+        mensajeError = `No se encontró el acudiente con documento ${solicitudSeleccionada?.acudiente1CC}. Verifique que el acudiente esté registrado en el sistema.`;
+      }
+      
       setNotificacion({
         abierta: true,
-        mensaje: `Error: ${err.message || 'No se pudo aprobar la solicitud'}`,
+        mensaje: `Error: ${mensajeError}`,
         tipo: 'error'
       });
     } finally {
