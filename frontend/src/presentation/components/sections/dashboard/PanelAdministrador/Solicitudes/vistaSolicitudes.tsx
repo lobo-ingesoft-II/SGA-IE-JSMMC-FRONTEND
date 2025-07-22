@@ -3,135 +3,334 @@ import {
   Box,
   Typography,
   Paper,
-  Avatar,
-  Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  IconButton,
+  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+  Tabs,
+  Tab,
+  Pagination,
   Stack,
   Chip,
-  IconButton,
+  Snackbar,
+  Alert,
+  Avatar,
+  Tooltip,
+  Card,
+  CardContent,
   Collapse,
-  useTheme,
-  CircularProgress
+  InputAdornment
 } from '@mui/material';
 import {
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
+  Check as CheckIcon,
+  Close as CloseIcon,
+  Visibility as ViewIcon,
+  Assignment as AssignmentIcon,
+  Search as SearchIcon,
+  Person as PersonIcon,
   School as SchoolIcon,
-  Book as BookIcon,
-  LocationOn as LocationOnIcon
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  CalendarToday as CalendarIcon,
+  LocationOn as LocationIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
-import { useParams } from 'react-router-dom';
-import { getSedeData, SedeData, CursoData } from '../../../../../../services/PanelAdministrador/sedeService';
-import { getCursosBySede } from '../../../../../../services/PanelAdministrador/inicioService';
 
-interface MateriaData {
+// Interfaces y servicios
+interface SolicitudPrematricula {
   id: string;
+  numeroDocumento: string;
+  nombres: string;
+  apellidos: string;
+  fechaNacimiento: string;
+  edad?: number;
+  acudiente1CC: string;
+  nombreAcudiente1: string;
+  telefonoAcudiente1?: string;
+  correoAcudiente1?: string;
+  sede: string;
+  gradoSolicitado: string;
+  fechaSolicitud: string;
+  observaciones?: string;
+  estado?: 'pendiente' | 'procesando';
+}
+
+interface CursoDisponible {
+  id: number;
   nombre: string;
-  docente: string;
+  grado: string;
+  sede: string;
+  cupos_disponibles: number;
 }
 
-interface CursoConMaterias extends CursoData {
-  materias: MateriaData[];
-}
+// Datos mock para desarrollo
+const MOCK_SOLICITUDES: SolicitudPrematricula[] = [
+  {
+    id: "1",
+    numeroDocumento: "1234567890",
+    nombres: "Juan Carlos",
+    apellidos: "Pérez Gómez",
+    fechaNacimiento: "2010-03-15",
+    edad: 13,
+    acudiente1CC: "98765432101",
+    nombreAcudiente1: "María Gómez",
+    telefonoAcudiente1: "3001234567",
+    correoAcudiente1: "maria.gomez@email.com",
+    sede: "Sede Principal",
+    gradoSolicitado: "Séptimo",
+    fechaSolicitud: "2024-01-15T10:30:00Z",
+    observaciones: "Estudiante con buen rendimiento académico",
+    estado: "pendiente"
+  },
+  {
+    id: "2",
+    numeroDocumento: "0987654321",
+    nombres: "Ana Sofia",
+    apellidos: "Rodríguez López",
+    fechaNacimiento: "2009-07-22",
+    edad: 14,
+    acudiente1CC: "12345678901",
+    nombreAcudiente1: "Carlos Rodríguez",
+    telefonoAcudiente1: "3109876543",
+    correoAcudiente1: "carlos.rodriguez@email.com",
+    sede: "Sede Norte",
+    gradoSolicitado: "Octavo",
+    fechaSolicitud: "2024-01-14T14:20:00Z",
+    estado: "pendiente"
+  },
+  {
+    id: "3",
+    numeroDocumento: "1122334455",
+    nombres: "Luis Fernando",
+    apellidos: "González Castro",
+    fechaNacimiento: "2011-01-10",
+    edad: 12,
+    acudiente1CC: "55443322101",
+    nombreAcudiente1: "Carmen Castro",
+    telefonoAcudiente1: "3125551234",
+    correoAcudiente1: "carmen.castro@email.com",
+    sede: "Sede Principal",
+    gradoSolicitado: "Sexto",
+    fechaSolicitud: "2024-01-13T09:15:00Z",
+    estado: "pendiente"
+  }
+];
 
-const VistaSedes = () => {
-  const { sedeId } = useParams<{ sedeId: string }>();
-  const theme = useTheme();
+const MOCK_CURSOS: CursoDisponible[] = [
+  { id: 1, nombre: "6-A", grado: "Sexto", sede: "Sede Principal", cupos_disponibles: 8 },
+  { id: 2, nombre: "7-A", grado: "Séptimo", sede: "Sede Principal", cupos_disponibles: 5 },
+  { id: 3, nombre: "8-B", grado: "Octavo", sede: "Sede Norte", cupos_disponibles: 3 }
+];
 
-  const [sedeData, setSedeData] = useState<SedeData | null>(null);
-  const [cursosConMaterias, setCursosConMaterias] = useState<CursoConMaterias[]>([]);
+const SOLICITUDES_POR_PAGINA = 15;
+
+const VistaSolicitudes = () => {
+  // Estados para la tabla y filtros
+  const [solicitudes, setSolicitudes] = useState<SolicitudPrematricula[]>([]);
+  const [sedeSeleccionada, setSedeSeleccionada] = useState<string>('todas');
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [busqueda, setBusqueda] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedCurso, setExpandedCurso] = useState<string | null>(null);
-  const [loadingMaterias, setLoadingMaterias] = useState<Record<string, boolean>>({});
 
+  // Estados para expansión de detalles
+  const [expandedSolicitud, setExpandedSolicitud] = useState<string | null>(null);
+
+  // Estados para los modales
+  const [modalAprobar, setModalAprobar] = useState(false);
+  const [modalRechazar, setModalRechazar] = useState(false);
+  const [solicitudSeleccionada, setSolicitudSeleccionada] = useState<SolicitudPrematricula | null>(null);
+  const [cursoSeleccionado, setCursoSeleccionado] = useState<number | ''>('');
+  const [observacionesRechazo, setObservacionesRechazo] = useState('');
+  const [procesando, setProcesando] = useState(false);
+
+  // Estado para el total de solicitudes
+  const [totalSolicitudes, setTotalSolicitudes] = useState(0);
+
+  // Estados para notificaciones
+  const [notificacion, setNotificacion] = useState({
+    abierta: false,
+    mensaje: '',
+    tipo: 'success' as 'success' | 'error' | 'info' | 'warning'
+  });
+
+  // Cargar solicitudes al iniciar
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      setError(null);
+    setSolicitudes([]);
+    setLoading(true);
+    cargarSolicitudes();
+  }, [sedeSeleccionada, paginaActual]);
 
-      try {
-        const data = await getSedeData(sedeId || '');
-        setSedeData(data);
+  const cargarSolicitudes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log(`Cargando solicitudes para sede: ${sedeSeleccionada}, página: ${paginaActual}`);
+      
+      // TODO: Reemplazar con llamada real a la API
+      // const response = await fetch(`http://localhost:8001/pre_registros`);
+      // const data = await response.json();
+      // setSolicitudes(data.coleccion);
+      
+      // Simulación con datos mock
+      setTimeout(() => {
+        let filtradas = MOCK_SOLICITUDES;
         
-        // Inicializar cursos sin materias
-        const cursosIniciales: CursoConMaterias[] = data.cursos.map(curso => ({
-          ...curso,
-          materias: []
-        }));
-        setCursosConMaterias(cursosIniciales);
-      } catch (err: any) {
-        console.warn('Error al cargar los datos de la sede:', err.message);
-        setError('No se pudo cargar la información de la sede');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, [sedeId]);
-
-  const handleExpandCurso = async (cursoId: string) => {
-    const isExpanded = expandedCurso === cursoId;
-    setExpandedCurso(isExpanded ? null : cursoId);
-    
-    if (!isExpanded) {
-      // Verificar si ya tenemos las materias cargadas
-      const cursoActual = cursosConMaterias.find(c => c.id === cursoId);
-      if (cursoActual && cursoActual.materias.length === 0) {
-        setLoadingMaterias(prev => ({ ...prev, [cursoId]: true }));
-        try {
-          const response = await fetch(`http://localhost:8001/asignacion_asignaturas/asignatura/por_curso/${cursoId}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
-          }
-          
-          const asignaturas = await response.json();
-          const materiasReales: MateriaData[] = asignaturas.map((asignatura: { nombre: string }, index: number) => ({
-            id: `${cursoId}_${index + 1}`,
-            nombre: asignatura.nombre,
-            docente: 'Sin asignar' // Por ahora sin docente específico
-          }));
-          
-          setCursosConMaterias(prev => 
-            prev.map(curso => 
-              curso.id === cursoId 
-                ? { ...curso, materias: materiasReales }
-                : curso
-            )
-          );
-        } catch (err) {
-          console.error('Error al cargar materias:', err);
-          // Fallback con materias vacías
-          setCursosConMaterias(prev => 
-            prev.map(curso => 
-              curso.id === cursoId 
-                ? { ...curso, materias: [] }
-                : curso
-            )
-          );
-        } finally {
-          setLoadingMaterias(prev => ({ ...prev, [cursoId]: false }));
+        if (sedeSeleccionada !== 'todas') {
+          filtradas = MOCK_SOLICITUDES.filter(s => s.sede === sedeSeleccionada);
         }
-      }
+        
+        setTotalSolicitudes(filtradas.length);
+        setTotalPaginas(Math.ceil(filtradas.length / SOLICITUDES_POR_PAGINA));
+        
+        const inicio = (paginaActual - 1) * SOLICITUDES_POR_PAGINA;
+        const fin = inicio + SOLICITUDES_POR_PAGINA;
+        setSolicitudes(filtradas.slice(inicio, fin));
+        setLoading(false);
+      }, 1000);
+      
+    } catch (err: any) {
+      console.error('Error al cargar solicitudes:', err);
+      setError('No se pudieron cargar las solicitudes. Por favor, intente nuevamente.');
+      setLoading(false);
     }
   };
 
-  if (loading) {
+  // Filtrar solicitudes por búsqueda
+  const solicitudesFiltradas = solicitudes.filter(solicitud =>
+    `${solicitud.nombres} ${solicitud.apellidos}`.toLowerCase().includes(busqueda.toLowerCase()) ||
+    solicitud.numeroDocumento.includes(busqueda) ||
+    solicitud.nombreAcudiente1.toLowerCase().includes(busqueda.toLowerCase())
+  );
+
+  // Manejadores para los modales
+  const abrirModalAprobacion = (solicitud: SolicitudPrematricula) => {
+    setSolicitudSeleccionada(solicitud);
+    setCursoSeleccionado('');
+    setModalAprobar(true);
+  };
+
+  const abrirModalRechazo = (solicitud: SolicitudPrematricula) => {
+    setSolicitudSeleccionada(solicitud);
+    setObservacionesRechazo('');
+    setModalRechazar(true);
+  };
+
+  const cerrarModales = () => {
+    setModalAprobar(false);
+    setModalRechazar(false);
+    setSolicitudSeleccionada(null);
+    setCursoSeleccionado('');
+    setObservacionesRechazo('');
+  };
+
+  // Aprobar solicitud
+  const aprobarSolicitud = async () => {
+    if (!solicitudSeleccionada || !cursoSeleccionado) return;
+
+    setProcesando(true);
+    try {
+      // TODO: Llamada real a la API
+      // await fetch(`http://localhost:8001/prematricula/aceptar/${solicitudSeleccionada.id}/${cursoSeleccionado}`, {
+      //   method: 'POST'
+      // });
+
+      // Simulación
+      setTimeout(() => {
+        setSolicitudes(prev => prev.filter(s => s.id !== solicitudSeleccionada.id));
+        setNotificacion({
+          abierta: true,
+          mensaje: `Solicitud de ${solicitudSeleccionada.nombres} ${solicitudSeleccionada.apellidos} aprobada correctamente`,
+          tipo: 'success'
+        });
+        setProcesando(false);
+        cerrarModales();
+      }, 2000);
+
+    } catch (err: any) {
+      console.error('Error al aprobar solicitud:', err);
+      setNotificacion({
+        abierta: true,
+        mensaje: `Error: ${err.message || 'No se pudo aprobar la solicitud'}`,
+        tipo: 'error'
+      });
+      setProcesando(false);
+    }
+  };
+
+  // Rechazar solicitud
+  const rechazarSolicitud = async () => {
+    if (!solicitudSeleccionada) return;
+
+    setProcesando(true);
+    try {
+      // TODO: Llamada real a la API
+      // await fetch(`http://localhost:8001/prematricula/rechazar/${solicitudSeleccionada.id}`, {
+      //   method: 'POST'
+      // });
+
+      // Simulación
+      setTimeout(() => {
+        setSolicitudes(prev => prev.filter(s => s.id !== solicitudSeleccionada.id));
+        setNotificacion({
+          abierta: true,
+          mensaje: `Solicitud de ${solicitudSeleccionada.nombres} ${solicitudSeleccionada.apellidos} rechazada`,
+          tipo: 'warning'
+        });
+        setProcesando(false);
+        cerrarModales();
+      }, 2000);
+
+    } catch (err: any) {
+      console.error('Error al rechazar solicitud:', err);
+      setNotificacion({
+        abierta: true,
+        mensaje: `Error: ${err.message || 'No se pudo rechazar la solicitud'}`,
+        tipo: 'error'
+      });
+      setProcesando(false);
+    }
+  };
+
+  // Expandir/contraer detalles
+  const toggleExpandSolicitud = (solicitudId: string) => {
+    setExpandedSolicitud(expandedSolicitud === solicitudId ? null : solicitudId);
+  };
+
+  // Cerrar notificación
+  const cerrarNotificacion = () => {
+    setNotificacion(prev => ({ ...prev, abierta: false }));
+  };
+
+  // Obtener sedes únicas para los tabs
+  const sedesUnicas = [...new Set(MOCK_SOLICITUDES.map(s => s.sede))];
+
+  if (loading && solicitudes.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <CircularProgress />
-        <Typography variant="h6" sx={{ ml: 2 }}>Cargando información de la sede...</Typography>
+        <Typography variant="h6" sx={{ ml: 2 }}>Cargando solicitudes de prematrícula...</Typography>
       </Box>
     );
   }
 
-  if (error) {
+  if (error && solicitudes.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
         <Typography variant="h6" color="error">
@@ -141,158 +340,346 @@ const VistaSedes = () => {
     );
   }
 
-  if (!sedeData) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Typography variant="h6" color="error">
-          Sede no encontrada
-        </Typography>
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: 3 }}>
-        <Stack direction="row" spacing={3} alignItems="center">
-          <Avatar
-            sx={{ width: 100, height: 100, bgcolor: theme.palette.primary.main, fontSize: 40 }}
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: 3 }}>
+        <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+          <AssignmentIcon sx={{ mr: 2 }} />
+          Solicitudes de Prematrícula
+        </Typography>
+        
+        {/* Filtros y acciones */}
+        <Box sx={{ 
+          mb: 3, 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' }, 
+          gap: 2, 
+          justifyContent: 'space-between', 
+          alignItems: { xs: 'stretch', md: 'center' } 
+        }}>
+          <Tabs
+            value={sedeSeleccionada}
+            onChange={(_, newValue) => {
+              setSedeSeleccionada(newValue);
+              setPaginaActual(1);
+            }}
+            aria-label="filtro de sedes"
+            variant="scrollable"
+            scrollButtons="auto"
           >
-            {sedeData.nombre.charAt(0)}
-          </Avatar>
-          <Box>
-            <Typography variant="h4" component="h1" gutterBottom>
-              {sedeData.nombre}
-            </Typography>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Typography variant="body1" color="text.secondary">
-                {sedeData.direccion}
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                {sedeData.telefono}
-              </Typography>
-            </Stack>
-          </Box>
-        </Stack>
-      </Paper>
-
-      <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 2 }}>
-        <SchoolIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-        Cursos de la Sede
-      </Typography>
-
-      {cursosConMaterias.length === 0 ? (
-        <Paper elevation={2} sx={{ p: 3, textAlign: 'center', borderRadius: 3 }}>
-          <Typography variant="body1" color="text.secondary">
-            No hay cursos registrados en esta sede.
-          </Typography>
-        </Paper>
-      ) : (
-        <Box sx={{ mb: 4 }}>
-          {cursosConMaterias.map((curso) => (
-            <Paper
-              key={curso.id}
-              elevation={2}
-              sx={{
-                mb: 2,
-                borderRadius: 3,
-                overflow: 'hidden',
-                borderLeft: `4px solid ${theme.palette.primary.main}`
-              }}
-            >
-              <Box
-                sx={{
-                  p: 2,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  backgroundColor:
-                    expandedCurso === curso.id ? theme.palette.action.selected : 'inherit',
-                  '&:hover': {
-                    backgroundColor: theme.palette.action.hover
-                  }
-                }}
-                onClick={() => handleExpandCurso(curso.id)}
-              >
-                <Box>
-                  <Typography variant="h6" component="h3">
-                    {curso.nombre}
-                  </Typography>
-                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                    <Chip label={curso.grado} size="small" color="primary" variant="outlined" />
-                    <Chip label={`Año lectivo: ${curso.anioLectivo}`} size="small" color="secondary" />
-                    <Chip label={`${curso.materias.length} materias`} size="small" />
-                  </Stack>
-                </Box>
-                <IconButton>
-                  {expandedCurso === curso.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                </IconButton>
-              </Box>
-
-              <Collapse in={expandedCurso === curso.id}>
-                <Divider />
-                <Box sx={{ p: 2 }}>
-                  <Typography
-                    variant="subtitle1"
-                    gutterBottom
-                    sx={{ display: 'flex', alignItems: 'center' }}
-                  >
-                    <BookIcon sx={{ mr: 1, fontSize: '1rem' }} />
-                    Materias del curso
-                  </Typography>
-
-                  {loadingMaterias[curso.id] ? (
-                    <Box display="flex" justifyContent="center" p={2}>
-                      <CircularProgress size={24} />
-                      <Typography variant="body2" sx={{ ml: 1 }}>Cargando materias...</Typography>
-                    </Box>
-                  ) : (
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                          xs: '1fr',
-                          sm: 'repeat(2, 1fr)',
-                          md: 'repeat(3, 1fr)'
-                        },
-                        gap: 2
-                      }}
-                    >
-                      {curso.materias.map((materia) => (
-                        <Paper
-                          key={materia.id}
-                          elevation={1}
-                          sx={{
-                            p: 2,
-                            borderRadius: 2,
-                            cursor: 'pointer',
-                            borderLeft: `3px solid ${theme.palette.secondary.main}`,
-                            '&:hover': {
-                              boxShadow: theme.shadows[3]
-                            }
-                          }}
-                        >
-                          <Typography variant="subtitle2" gutterBottom>
-                            {materia.nombre}
-                          </Typography>
-                          {materia.docente && (
-                            <Typography variant="caption" display="block">
-                              Docente: {materia.docente}
-                            </Typography>
-                          )}
-                        </Paper>
-                      ))}
-                    </Box>
-                  )}
-                </Box>
-              </Collapse>
-            </Paper>
-          ))}
+            <Tab label="Todas las Sedes" value="todas" />
+            {sedesUnicas.map(sede => (
+              <Tab key={sede} label={sede} value={sede} />
+            ))}
+          </Tabs>
+          
+          <TextField
+            size="small"
+            placeholder="Buscar por nombre, documento o acudiente..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              )
+            }}
+            sx={{ minWidth: 300 }}
+          />
         </Box>
-      )}
+        
+        {/* Tabla de solicitudes */}
+        <TableContainer component={Paper} variant="outlined" sx={{ overflow: 'auto' }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Estudiante</TableCell>
+                <TableCell>Documento</TableCell>
+                <TableCell>Acudiente</TableCell>
+                <TableCell>Sede</TableCell>
+                <TableCell>Grado</TableCell>
+                <TableCell>Fecha Solicitud</TableCell>
+                <TableCell>Estado</TableCell>
+                <TableCell align="center">Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center">
+                    <CircularProgress size={24} />
+                  </TableCell>
+                </TableRow>
+              ) : solicitudesFiltradas.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center">
+                    No se encontraron solicitudes
+                  </TableCell>
+                </TableRow>
+              ) : (
+                solicitudesFiltradas.map((solicitud) => (
+                  <>
+                    <TableRow key={solicitud.id} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar sx={{ width: 32, height: 32 }}>
+                            {solicitud.nombres.charAt(0)}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {solicitud.nombres} {solicitud.apellidos}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {solicitud.edad} años
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </TableCell>
+                      <TableCell>{solicitud.numeroDocumento}</TableCell>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2">{solicitud.nombreAcudiente1}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            CC {solicitud.acudiente1CC}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>{solicitud.sede}</TableCell>
+                      <TableCell>
+                        <Chip label={solicitud.gradoSolicitado} size="small" color="primary" variant="outlined" />
+                      </TableCell>
+                      <TableCell>
+                        {new Date(solicitud.fechaSolicitud).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label="Pendiente" 
+                          color="warning"
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Stack direction="row" spacing={1} justifyContent="center">
+                          <Tooltip title="Ver detalles">
+                            <IconButton 
+                              size="small"
+                              onClick={() => toggleExpandSolicitud(solicitud.id)}
+                            >
+                              {expandedSolicitud === solicitud.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Aprobar solicitud">
+                            <IconButton 
+                              size="small" 
+                              color="success"
+                              onClick={() => abrirModalAprobacion(solicitud)}
+                            >
+                              <CheckIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Rechazar solicitud">
+                            <IconButton 
+                              size="small" 
+                              color="error"
+                              onClick={() => abrirModalRechazo(solicitud)}
+                            >
+                              <CloseIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                    
+                    {/* Fila expandible con detalles */}
+                    <TableRow>
+                      <TableCell colSpan={8} sx={{ p: 0, borderBottom: 'none' }}>
+                        <Collapse in={expandedSolicitud === solicitud.id}>
+                          <Box sx={{ p: 2, backgroundColor: 'grey.50' }}>
+                            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                              {/* Card de información del estudiante */}
+                              <Card variant="outlined" sx={{ flex: '1 1 300px' }}>
+                                <CardContent>
+                                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <PersonIcon sx={{ mr: 1 }} />
+                                    Información del Estudiante
+                                  </Typography>
+                                  <Stack spacing={1}>
+                                    <Typography variant="body2">
+                                      <strong>Fecha de nacimiento:</strong> {new Date(solicitud.fechaNacimiento).toLocaleDateString()}
+                                    </Typography>
+                                    {solicitud.observaciones && (
+                                      <Typography variant="body2">
+                                        <strong>Observaciones:</strong> {solicitud.observaciones}
+                                      </Typography>
+                                    )}
+                                  </Stack>
+                                </CardContent>
+                              </Card>
+                              
+                              {/* Card de información del acudiente */}
+                              <Card variant="outlined" sx={{ flex: '1 1 300px' }}>
+                                <CardContent>
+                                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <PersonIcon sx={{ mr: 1 }} />
+                                    Información del Acudiente
+                                  </Typography>
+                                  <Stack spacing={1}>
+                                    {solicitud.telefonoAcudiente1 && (
+                                      <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <PhoneIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                                        {solicitud.telefonoAcudiente1}
+                                      </Typography>
+                                    )}
+                                    {solicitud.correoAcudiente1 && (
+                                      <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <EmailIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                                        {solicitud.correoAcudiente1}
+                                      </Typography>
+                                    )}
+                                  </Stack>
+                                </CardContent>
+                              </Card>
+                            </Box>
+                          </Box>
+                        </Collapse>
+                      </TableCell>
+                    </TableRow>
+                  </>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        
+        {/* Paginación */}
+        {totalPaginas > 1 && (
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+            <Pagination 
+              count={totalPaginas} 
+              page={paginaActual} 
+              onChange={(_, page) => setPaginaActual(page)} 
+              color="primary" 
+            />
+          </Box>
+        )}
+      </Paper>
+      
+      {/* Modal de aprobación */}
+      <Dialog open={modalAprobar} onClose={cerrarModales} maxWidth="sm" fullWidth>
+        <DialogTitle>Aprobar Solicitud de Prematrícula</DialogTitle>
+        <DialogContent>
+          {solicitudSeleccionada && (
+            <>
+              <Typography variant="body1" gutterBottom>
+                ¿Está seguro de aprobar la solicitud de{' '}
+                <strong>{solicitudSeleccionada.nombres} {solicitudSeleccionada.apellidos}</strong>?
+              </Typography>
+              
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Asignar a curso</InputLabel>
+                <Select
+                  value={cursoSeleccionado}
+                  onChange={(e) => setCursoSeleccionado(e.target.value)}
+                  required
+                >
+                  {MOCK_CURSOS
+                    .filter(curso => 
+                      curso.grado === solicitudSeleccionada.gradoSolicitado &&
+                      curso.sede === solicitudSeleccionada.sede
+                    )
+                    .map(curso => (
+                      <MenuItem key={curso.id} value={curso.id}>
+                        {curso.nombre} - {curso.grado} ({curso.cupos_disponibles} cupos disponibles)
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
+              
+              {cursoSeleccionado && (
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  Se creará automáticamente el usuario acudiente y se matriculará al estudiante.
+                </Alert>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cerrarModales} disabled={procesando}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={aprobarSolicitud}
+            variant="contained"
+            disabled={!cursoSeleccionado || procesando}
+            startIcon={procesando ? <CircularProgress size={16} /> : <CheckIcon />}
+          >
+            {procesando ? 'Aprobando...' : 'Aprobar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de rechazo */}
+      <Dialog open={modalRechazar} onClose={cerrarModales} maxWidth="sm" fullWidth>
+        <DialogTitle>Rechazar Solicitud de Prematrícula</DialogTitle>
+        <DialogContent>
+          {solicitudSeleccionada && (
+            <>
+              <Typography variant="body1" gutterBottom>
+                ¿Está seguro de rechazar la solicitud de{' '}
+                <strong>{solicitudSeleccionada.nombres} {solicitudSeleccionada.apellidos}</strong>?
+              </Typography>
+              
+              <TextField
+                label="Observaciones (opcional)"
+                multiline
+                rows={3}
+                fullWidth
+                margin="normal"
+                value={observacionesRechazo}
+                onChange={(e) => setObservacionesRechazo(e.target.value)}
+                placeholder="Motivo del rechazo..."
+              />
+              
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                Esta acción eliminará permanentemente la solicitud.
+              </Alert>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cerrarModales} disabled={procesando}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={rechazarSolicitud}
+            variant="contained"
+            color="error"
+            disabled={procesando}
+            startIcon={procesando ? <CircularProgress size={16} /> : <CloseIcon />}
+          >
+            {procesando ? 'Rechazando...' : 'Rechazar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Notificaciones */}
+      <Snackbar 
+        open={notificacion.abierta} 
+        autoHideDuration={6000} 
+        onClose={cerrarNotificacion}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={cerrarNotificacion} 
+          severity={notificacion.tipo} 
+          sx={{ width: '100%' }}
+        >
+          {notificacion.mensaje}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
 
-export default VistaSedes;
+export default VistaSolicitudes;
