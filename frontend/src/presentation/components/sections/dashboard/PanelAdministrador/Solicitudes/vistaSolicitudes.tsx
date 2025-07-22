@@ -201,13 +201,18 @@ const VistaSolicitudes = () => {
 
     setProcesando(true);
     try {
-      // Llamada real a la API
-      await aprobarSolicitud(solicitudSeleccionada.id, cursoSeleccionado as number);
+      console.log(`Aprobando solicitud: ${solicitudSeleccionada.id} para curso: ${cursoSeleccionado}`);
       
+      // Llamada real a la API
+      const resultado = await aprobarSolicitud(solicitudSeleccionada.id, cursoSeleccionado as number);
+      console.log('Resultado de la aprobación:', resultado);
+      
+      // Eliminar la solicitud de la tabla
       setSolicitudes(prev => prev.filter(s => s.id !== solicitudSeleccionada.id));
+      
       setNotificacion({
         abierta: true,
-        mensaje: `Solicitud de ${solicitudSeleccionada.nombres} ${solicitudSeleccionada.apellidos} aprobada correctamente`,
+        mensaje: `Solicitud de ${solicitudSeleccionada.nombres} ${solicitudSeleccionada.apellidos} aprobada correctamente. Se ha creado el usuario acudiente y matriculado al estudiante.`,
         tipo: 'success'
       });
       cerrarModales();

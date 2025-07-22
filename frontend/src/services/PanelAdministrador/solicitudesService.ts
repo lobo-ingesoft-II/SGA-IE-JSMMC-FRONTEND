@@ -85,10 +85,16 @@ export const buscarSolicitudPorDocumento = async (numeroDocumento: string): Prom
  */
 export const aprobarSolicitud = async (solicitudId: string, cursoId: number): Promise<any> => {
   try {
+    console.log(`Enviando solicitud de aprobación: /adm_pre_registro/prematricula/aceptar/${solicitudId}/${cursoId}`);
     const response = await apiClient.post(`/adm_pre_registro/prematricula/aceptar/${solicitudId}/${cursoId}`);
+    console.log('Respuesta del servidor:', response.data);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al aprobar solicitud:', error);
+    if (error.response) {
+      console.error('Detalles del error:', error.response.data);
+      throw new Error(`No se pudo aprobar la solicitud: ${error.response.data.detail || error.message}`);
+    }
     throw new Error('No se pudo aprobar la solicitud');
   }
 };
@@ -98,10 +104,16 @@ export const aprobarSolicitud = async (solicitudId: string, cursoId: number): Pr
  */
 export const rechazarSolicitud = async (solicitudId: string): Promise<any> => {
   try {
+    console.log(`Enviando solicitud de rechazo: /adm_pre_registro/prematricula/rechazar/${solicitudId}`);
     const response = await apiClient.post(`/adm_pre_registro/prematricula/rechazar/${solicitudId}`);
+    console.log('Respuesta del servidor:', response.data);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al rechazar solicitud:', error);
+    if (error.response) {
+      console.error('Detalles del error:', error.response.data);
+      throw new Error(`No se pudo rechazar la solicitud: ${error.response.data.detail || error.message}`);
+    }
     throw new Error('No se pudo rechazar la solicitud');
   }
 };
