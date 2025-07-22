@@ -16,9 +16,10 @@ import { NavItem } from '../../../../helpers/navItem';
 interface NavItemProps {
   navItem: NavItem;
   Link: OverridableComponent<LinkTypeMap>;
+  'data-testid'?: string;
 }
 
-const NavButton = ({ navItem, Link }: NavItemProps): ReactElement => {
+const NavButton = ({ navItem, Link, ...props }: NavItemProps): ReactElement => {
   const { pathname } = useLocation();
   const [checked, setChecked] = useState(false);
   const [nestedChecked, setNestedChecked] = useState<boolean[]>([]);
@@ -77,6 +78,7 @@ const NavButton = ({ navItem, Link }: NavItemProps): ReactElement => {
 
   return (
     <ListItem
+      {...props}
       sx={{
         my: 1.25,
         borderRadius: 2,

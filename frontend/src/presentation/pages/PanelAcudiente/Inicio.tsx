@@ -23,7 +23,7 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAcudienteInicioData, AcudienteInicioData } from '../../../services/PanelAcudiente/inicioService';
-import { useAuth } from '../../../context/authContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const Inicio: React.FC = () => {
   const theme = useTheme();
@@ -48,7 +48,7 @@ const Inicio: React.FC = () => {
         const data = await getAcudienteInicioData();
         setAcudienteData(data);
       } catch (err: any) {
-        console.error('Error al cargar los datos del acudiente:', err);
+        // Error al cargar los datos del acudiente
         setError('No se pudo cargar la información del acudiente.');
       } finally {
         setLoading(false);

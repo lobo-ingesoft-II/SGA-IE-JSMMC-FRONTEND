@@ -7,35 +7,34 @@ import {
   CircularProgress,
   useTheme,
   Stack,
-  Chip,
   List,
   ListItem,
-  Avatar
+  Avatar,
 } from '@mui/material';
 import {
   Person as PersonIcon,
   Email as EmailIcon,
   Work as WorkIcon,
   School as SchoolIcon,
-  Book as BookIcon,
   LocationOn as LocationOnIcon,
   Dashboard as DashboardIcon
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getAdminInicioData, AdminInicioData } from '../../../services/PanelAdministrador/inicioService';
-import { useAuth } from '../../../context/authContext';
+import { getAdminDashboardData, AdminInicioData } from '../../../services/PanelAdministrador/inicioService';
+import { useAuth } from '../../../context/AuthContext';
 
 const Inicio: React.FC = () => {
   const theme = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { inicioId } = useParams();
-  const [adminData, setadminData] = useState<AdminInicioData | null>(null);
+  const [adminData, setAdminData] = useState<AdminInicioData | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.id && String(inicioId) !== String(user.id)) {
+    if (user?.id && inicioId && String(inicioId) !== String(user.id)) {
       navigate(`/PanelAdministrador/${user.id}/Inicio`, { replace: true });
     }
   }, [inicioId, user, navigate]);
@@ -45,10 +44,9 @@ const Inicio: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getAdminInicioData();
-        setadminData(data);
+        const data = await getAdminDashboardData();
+        setAdminData(data);
       } catch (err: any) {
-        console.error('Error al cargar los datos del administrador:', err);
         setError('No se pudo cargar la información del administrador.');
       } finally {
         setLoading(false);
@@ -56,6 +54,8 @@ const Inicio: React.FC = () => {
     }
     fetchData();
   }, []);
+
+
 
   if (loading) {
     return (
@@ -86,7 +86,7 @@ const Inicio: React.FC = () => {
     <Box sx={{ p: 3, width: '100%' }}>
       <Typography variant="h5" component="h1" gutterBottom sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
         <DashboardIcon sx={{ mr: 1 }} />
-        Bienvenido al Portal Administrativo, {adminData.nombre}
+Bienvenido al Panel Administrativo, {adminData.nombre}
       </Typography>
 
       <Grid container spacing={1} sx={{ width: '100%', m: 0 }}>
@@ -132,60 +132,58 @@ const Inicio: React.FC = () => {
               mb: 2,
               borderRadius: 3,
               overflow: 'hidden',
-              borderLeft: `4px solid ${theme.palette.secondary.main}`,
+              borderLeft: `4px solid ${theme.palette.secondary.main}`
             }}
           >
             <Box sx={{ p: 2, backgroundColor: theme.palette.action.selected }}>
               <Typography variant="h5" component="h3" sx={{ display: 'flex', alignItems: 'center' }}>
                 <SchoolIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-                Tus Asignaciones
+                Sedes de la Institución
               </Typography>
             </Box>
             <Box sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mt: 2, mb: 1 }}>Sedes Asignadas:</Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap">
-                {adminData.sedesAsignadas.length > 0 ? (
-                  adminData.sedesAsignadas.map(sede => (
-                    <Chip key={sede.id} icon={<LocationOnIcon />} label={sede.nombre} color="info" variant="outlined" size="small" sx={{ mb: 1 }} />
-                  ))
-                ) : (
-                  <Typography variant="body2" color="text.secondary">Ninguna sede asignada.</Typography>
-                )}
-              </Stack>
 
-              <Typography variant="h5" sx={{ mt: 2, mb: 1 }}>Cursos Asignados:</Typography>
-              <List dense disablePadding sx={{ alignItems: 'center' }}>
-                {adminData.cursosAsignados.length > 0 ? (
-                  adminData.cursosAsignados.map(curso => (
-                    <ListItem key={curso.id} disableGutters sx={{ px: 0 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <SchoolIcon fontSize="small" color="primary" style={{ marginRight: 8 }} />
-                        <Typography variant="subtitle2" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {`${curso.nombre} (${curso.grado})`}
-                        </Typography>
-                      </Box>
-                    </ListItem>
+              <List dense disablePadding sx={{ backgroundColor: theme.palette.grey[50], borderRadius: 1, p: 1 }}>
+                {adminData.sedes.length > 0 ? (
+                  adminData.sedes.map((sede, index) => (
+                    <Box key={sede.id_sede}>
+                      <ListItem
+                        disableGutters
+                        sx={{
+                          px: 1,
+                          py: 1.5,
+                          borderRadius: 1,
+                          cursor: 'pointer',
+                          backgroundColor: theme.palette.grey[100],
+                          mb: 0.5,
+                          borderBottom: index < adminData.sedes.length - 1 ? `1px solid ${theme.palette.grey[300]}` : 'none',
+                          '&:hover': {
+                            backgroundColor: theme.palette.primary.light,
+                            color: theme.palette.primary.contrastText
+                          }
+                        }}
+                        onClick={() => navigate(`/PanelAdministrador/${user?.id}/Sedes/${sede.id_sede}`)}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <LocationOnIcon fontSize="small" color="primary" style={{ marginRight: 8 }} />
+                            <Box>
+                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                {sede.nombre}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {sede.direccion} {sede.telefono}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Box>
+                      </ListItem>
+                    </Box>
                   ))
                 ) : (
-                  <Typography variant="body2" color="text.secondary">Ningún curso asignado.</Typography>
-                )}
-              </List>
-
-              <Typography variant="h5" sx={{ mt: 2, mb: 1 }}>Materias Asignadas:</Typography>
-              <List dense disablePadding>
-                {adminData.materiasAsignadas.length > 0 ? (
-                  adminData.materiasAsignadas.map(materia => (
-                    <ListItem key={materia.id} disableGutters sx={{ px: 0 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <BookIcon fontSize="small" color="secondary" style={{ marginRight: 8 }} />
-                        <Typography variant="subtitle2" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {`${materia.nombre} (${materia.cursoNombre})`}
-                        </Typography>
-                      </Box>
-                    </ListItem>
-                  ))
-                ) : (
-                  <Typography variant="body2" color="text.secondary">Ninguna materia asignada.</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', p: 1 }}>
+                    No hay sedes disponibles.
+                  </Typography>
                 )}
               </List>
             </Box>

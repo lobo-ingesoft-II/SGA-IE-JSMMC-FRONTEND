@@ -147,7 +147,7 @@ const fakeMateriaDetails: { [key: string]: MateriaDetalle } = {
  * @throws Error si la materia no se encuentra o hay un problema de comunicación con el backend.
  */
 export async function getMateriaDetalle(materiaId: string): Promise<MateriaDetalle> {
-  console.log(`[AsignaturaService] Solicitando detalles para la materia ID: ${materiaId}`);
+  // Solicitando detalles para la materia
 
   // Simular una llamada de red
   await new Promise(resolve => setTimeout(resolve, 500)); // Esperar 0.5 segundos
@@ -179,7 +179,7 @@ export async function updateAsistencia(
   fecha: string,
   nuevoEstado: 'Presente' | 'Ausente' | 'Justificado'
 ): Promise<boolean> {
-  console.log(`[AsignaturaService] Actualizando asistencia para Estudiante ${idEstudiante} en Materia ${idMateria} el ${fecha} a ${nuevoEstado}`);
+  // Actualizando asistencia para estudiante
   await new Promise(resolve => setTimeout(resolve, 300)); // Simula latencia
   // se haria un fetch POST/PUT al backend
   return true; // Simula éxito
@@ -200,7 +200,7 @@ export async function updateCalificacion(
   periodo: CalificacionRegistro['periodo'],
   nota: number | null
 ): Promise<boolean> {
-  console.log(`[AsignaturaService] Actualizando calificación para Estudiante ${idEstudiante} en Materia ${idMateria}, Parcial ${periodo} a ${nota}`);
+  // Actualizando calificación para estudiante
   await new Promise(resolve => setTimeout(resolve, 300)); // Simula latencia
   // se haría un fetch POST/PUT al backend
   return true; // Simula éxito
@@ -224,7 +224,7 @@ export async function getProfesorActual(): Promise<{ id: string; nombre: string 
  * @returns Promesa que resuelve a 'true' si la edición está bloqueada, 'false' en caso contrario.
  */
 export async function checkIfEditionIsLocked(idMateria: string, fecha: string): Promise<boolean> {
-    console.log(`[AsignaturaService] Verificando bloqueo de edición para Materia ${idMateria} en la fecha ${fecha}`);
+    // Verificando bloqueo de edición
     await new Promise(resolve => setTimeout(resolve, 200)); // Simula latencia
     // Aquí el backend verificaría si el período de edición para esa fecha y materia está cerrado.
     // Por ahora, usamos la variable de simulación IS_EDITION_ENABLED
