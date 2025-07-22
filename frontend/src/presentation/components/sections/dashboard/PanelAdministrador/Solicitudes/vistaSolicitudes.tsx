@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getSolicitudesConFallback, aprobarSolicitud, rechazarSolicitud } from '../../../../../../services/PanelAdministrador/solicitudesService';
 import {
   Box,
   Typography,
@@ -183,31 +184,26 @@ const VistaSolicitudes = () => {
     try {
       console.log(`Cargando solicitudes para sede: ${sedeSeleccionada}, página: ${paginaActual}`);
       
-      // TODO: Reemplazar con llamada real a la API
-      // const response = await fetch(`http://localhost:8001/pre_registros`);
-      // const data = await response.json();
-      // setSolicitudes(data.coleccion);
+      // Llamada real a la API
+      const solicitudes = await getSolicitudesConFallback();
       
-      // Simulación con datos mock
-      setTimeout(() => {
-        let filtradas = MOCK_SOLICITUDES;
-        
-        if (sedeSeleccionada !== 'todas') {
-          filtradas = MOCK_SOLICITUDES.filter(s => s.sede === sedeSeleccionada);
-        }
-        
-        setTotalSolicitudes(filtradas.length);
-        setTotalPaginas(Math.ceil(filtradas.length / SOLICITUDES_POR_PAGINA));
-        
-        const inicio = (paginaActual - 1) * SOLICITUDES_POR_PAGINA;
-        const fin = inicio + SOLICITUDES_POR_PAGINA;
-        setSolicitudes(filtradas.slice(inicio, fin));
-        setLoading(false);
-      }, 1000);
+      let filtradas = solicitudes;
+      
+      if (sedeSeleccionada !== 'todas') {
+        filtradas = solicitudes.filter(s => s.sede === sedeSeleccionada);
+      }
+      
+      setTotalSolicitudes(filtradas.length);
+      setTotalPaginas(Math.ceil(filtradas.length / SOLICITUDES_POR_PAGINA));
+      
+      const inicio = (paginaActual - 1) * SOLICITUDES_POR_PAGINA;
+      const fin = inicio + SOLICITUDES_POR_PAGINA;
+      setSolicitudes(filtradas.slice(inicio, fin));
       
     } catch (err: any) {
       console.error('Error al cargar solicitudes:', err);
       setError('No se pudieron cargar las solicitudes. Por favor, intente nuevamente.');
+    } finally {
       setLoading(false);
     }
   };
@@ -241,27 +237,23 @@ const VistaSolicitudes = () => {
   };
 
   // Aprobar solicitud
-  const aprobarSolicitud = async () => {
+  const handleAprobarSolicitud = async () => {
     if (!solicitudSeleccionada || !cursoSeleccionado) return;
 
     setProcesando(true);
     try {
-      // TODO: Llamada real a la API
-      // await fetch(`http://localhost:8001/prematricula/aceptar/${solicitudSeleccionada.id}/${cursoSeleccionado}`, {
-      //   method: 'POST'
-      // });
-
-      // Simulación
-      setTimeout(() => {
-        setSolicitudes(prev => prev.filter(s => s.id !== solicitudSeleccionada.id));
-        setNotificacion({
-          abierta: true,
-          mensaje: `Solicitud de ${solicitudSeleccionada.nombres} ${solicitudSeleccionada.apellidos} aprobada correctamente`,
-          tipo: 'success'
-        });
-        setProcesando(false);
-        cerrarModales();
-      }, 2000);
+      // Llamada real a la API
+      await aprobarSolicitud(solicitudSeleccionada.id, cursoSeleccionado as number);
+      
+      setSolicitudes(prev => prev.filter(s => s.id !== solicitudSeleccionada.id));
+      setNotificacion({
+        abierta: true,
+        mensaje: `Solicitud de ${solicitudSeleccionada.nombres} ${solicitudSeleccionada.apellidos} aprobada correctamente`,
+        tipo: 'success'
+      });
+      cerrarModales();
+      // Recargar solicitudes para actualizar la lista
+      cargarSolicitudes();
 
     } catch (err: any) {
       console.error('Error al aprobar solicitud:', err);
@@ -270,32 +262,29 @@ const VistaSolicitudes = () => {
         mensaje: `Error: ${err.message || 'No se pudo aprobar la solicitud'}`,
         tipo: 'error'
       });
+    } finally {
       setProcesando(false);
     }
   };
 
   // Rechazar solicitud
-  const rechazarSolicitud = async () => {
+  const handleRechazarSolicitud = async () => {
     if (!solicitudSeleccionada) return;
 
     setProcesando(true);
     try {
-      // TODO: Llamada real a la API
-      // await fetch(`http://localhost:8001/prematricula/rechazar/${solicitudSeleccionada.id}`, {
-      //   method: 'POST'
-      // });
-
-      // Simulación
-      setTimeout(() => {
-        setSolicitudes(prev => prev.filter(s => s.id !== solicitudSeleccionada.id));
-        setNotificacion({
-          abierta: true,
-          mensaje: `Solicitud de ${solicitudSeleccionada.nombres} ${solicitudSeleccionada.apellidos} rechazada`,
-          tipo: 'warning'
-        });
-        setProcesando(false);
-        cerrarModales();
-      }, 2000);
+      // Llamada real a la API
+      await rechazarSolicitud(solicitudSeleccionada.id);
+      
+      setSolicitudes(prev => prev.filter(s => s.id !== solicitudSeleccionada.id));
+      setNotificacion({
+        abierta: true,
+        mensaje: `Solicitud de ${solicitudSeleccionada.nombres} ${solicitudSeleccionada.apellidos} rechazada`,
+        tipo: 'warning'
+      });
+      cerrarModales();
+      // Recargar solicitudes para actualizar la lista
+      cargarSolicitudes();
 
     } catch (err: any) {
       console.error('Error al rechazar solicitud:', err);
@@ -304,6 +293,7 @@ const VistaSolicitudes = () => {
         mensaje: `Error: ${err.message || 'No se pudo rechazar la solicitud'}`,
         tipo: 'error'
       });
+    } finally {
       setProcesando(false);
     }
   };
@@ -609,7 +599,7 @@ const VistaSolicitudes = () => {
             Cancelar
           </Button>
           <Button
-            onClick={aprobarSolicitud}
+            onClick={handleAprobarSolicitud}
             variant="contained"
             disabled={!cursoSeleccionado || procesando}
             startIcon={procesando ? <CircularProgress size={16} /> : <CheckIcon />}
@@ -652,7 +642,7 @@ const VistaSolicitudes = () => {
             Cancelar
           </Button>
           <Button
-            onClick={rechazarSolicitud}
+            onClick={handleRechazarSolicitud}
             variant="contained"
             color="error"
             disabled={procesando}

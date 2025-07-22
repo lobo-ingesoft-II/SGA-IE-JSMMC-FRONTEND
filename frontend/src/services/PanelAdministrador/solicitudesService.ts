@@ -5,7 +5,7 @@ import { SolicitudesResponse,
  } from '../../models/autenticacion/solicitudes';
 
 // Configuración base de la API
-const API_BASE_URL = 'http://localhost:8001'; // URL del microservicio administrativo
+const API_BASE_URL = 'http://localhost:8013'; // URL del microservicio administrativo de pre-registro
 
 // Crear instancia de axios con configuración base
 const apiClient = axios.create({
@@ -20,7 +20,7 @@ const apiClient = axios.create({
  */
 export const getSolicitudesPrematricula = async (): Promise<SolicitudesResponse> => {
   try {
-    const response = await apiClient.get('/pre_registros');
+    const response = await apiClient.get('/adm_pre_registro/pre_registros');
     return response.data;
   } catch (error) {
     console.error('Error al obtener solicitudes de prematrícula:', error);
@@ -33,7 +33,7 @@ export const getSolicitudesPrematricula = async (): Promise<SolicitudesResponse>
  */
 export const buscarSolicitudPorDocumento = async (numeroDocumento: string): Promise<SolicitudPrematricula> => {
   try {
-    const response = await apiClient.get(`/prematricula/buscar/${numeroDocumento}`);
+    const response = await apiClient.get(`/adm_pre_registro/prematricula/buscar/${numeroDocumento}`);
     return response.data;
   } catch (error) {
     console.error('Error al buscar solicitud:', error);
@@ -46,7 +46,7 @@ export const buscarSolicitudPorDocumento = async (numeroDocumento: string): Prom
  */
 export const aprobarSolicitud = async (solicitudId: string, cursoId: number): Promise<any> => {
   try {
-    const response = await apiClient.post(`/prematricula/aceptar/${solicitudId}/${cursoId}`);
+    const response = await apiClient.post(`/adm_pre_registro/prematricula/aceptar/${solicitudId}/${cursoId}`);
     return response.data;
   } catch (error) {
     console.error('Error al aprobar solicitud:', error);
@@ -59,7 +59,7 @@ export const aprobarSolicitud = async (solicitudId: string, cursoId: number): Pr
  */
 export const rechazarSolicitud = async (solicitudId: string): Promise<any> => {
   try {
-    const response = await apiClient.post(`/prematricula/rechazar/${solicitudId}`);
+    const response = await apiClient.post(`/adm_pre_registro/prematricula/rechazar/${solicitudId}`);
     return response.data;
   } catch (error) {
     console.error('Error al rechazar solicitud:', error);
@@ -72,7 +72,7 @@ export const rechazarSolicitud = async (solicitudId: string): Promise<any> => {
  */
 export const getLogsPrematricula = async (): Promise<LogPrematricula[]> => {
   try {
-    const response = await apiClient.get('/log_pre_registros');
+    const response = await apiClient.get('/adm_pre_registro/log_pre_registros');
     return response.data.coleccion;
   } catch (error) {
     console.error('Error al obtener logs:', error);
